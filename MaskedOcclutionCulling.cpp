@@ -1,10 +1,13 @@
 #include "MaskedOcclutionCulling.h"
 #include <cstdlib>
 #include "CompilerSpecific.h"
+#include <iostream>
+
+using namespace std;
 
 MaskedOcclusionCulling *MaskedOcclusionCulling::Create(){
     auto implement=MaskedOcclusionCulling::DetectCPUFeatures();
-    std::cout<<implement<<endl;
+    std::cout<<implement<<std::endl;
     return nullptr;
 }
 
