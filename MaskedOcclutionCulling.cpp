@@ -27,7 +27,7 @@ MaskedOcclusionCulling::Implementation MaskedOcclusionCulling::DetectCPUFeatures
     //  std::vector<CpuInfo, MOCVectorAllocator<CpuInfo>> cpuId( mocalloc ), cpuIdEx( mocalloc );
     //  cpuId.resize( regs[0] );
     size_t cpuIdCount = regs[0];
-    CpuInfo * cpuId = static_cast<CpuInfo*>std::aligned_alloc( 64, sizeof(CpuInfo) * cpuIdCount);
+    CpuInfo * cpuId = static_cast<CpuInfo*>(std::aligned_alloc( 64, sizeof(CpuInfo) * cpuIdCount));
     
 	for (size_t i = 0; i < cpuIdCount; ++i)
 		__cpuidex(cpuId[i].regs, (int)i, 0);
@@ -37,7 +37,7 @@ MaskedOcclusionCulling::Implementation MaskedOcclusionCulling::DetectCPUFeatures
 
     //cpuIdEx.resize(regs[0] - 0x80000000);
     size_t cpuIdExCount = regs[0] - 0x80000000;
-    CpuInfo * cpuIdEx = static_cast<CpuInfo*>std::aligned_alloc( 64, sizeof( CpuInfo ) * cpuIdExCount );
+    CpuInfo * cpuIdEx = static_cast<CpuInfo*>(std::aligned_alloc( 64, sizeof( CpuInfo ) * cpuIdExCount));
 
     for (size_t i = 0; i < cpuIdExCount; ++i)
 		__cpuidex(cpuIdEx[i].regs, 0x80000000 + (int)i, 0);
