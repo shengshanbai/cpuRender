@@ -2,17 +2,24 @@
 #include <cstdlib>
 #include "CompilerSpecific.h"
 #include <iostream>
+#include <cstdio>
 
 using namespace std;
 
 MaskedOcclusionCulling *MaskedOcclusionCulling::Create(){
     auto implement=MaskedOcclusionCulling::DetectCPUFeatures();
-    std::cout<<implement<<std::endl;
-    return nullptr;
+    if (implement<MaskedOcclusionCulling::AVX2){
+        printf("the cpu not support avx2!");
+        return nullptr;
+    }
+    MaskedOcclusionCulling* moc=static_cast<MaskedOcclusionCulling*>(aligned_alloc(64,sizeof(MaskedOcclusionCulling)));
+    new (moc) MaskedOcclusionCulling();
+    return moc;
 }
 
 void MaskedOcclusionCulling::Destroy(MaskedOcclusionCulling *moc){
-
+    moc->~MaskedOcclusionCulling();
+	free(moc);
 }
 
 
@@ -64,4 +71,12 @@ MaskedOcclusionCulling::Implementation MaskedOcclusionCulling::DetectCPUFeatures
     std::free(cpuId);
     std::free(cpuIdEx);
     return retVal;
+}
+
+MaskedOcclusionCulling::MaskedOcclusionCulling(){
+    printf("constructor called()\n");
+}
+
+MaskedOcclusionCulling::~MaskedOcclusionCulling(){
+    printf("deconstructor called()\n");
 }
