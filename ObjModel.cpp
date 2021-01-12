@@ -47,7 +47,8 @@ bool ObjModel::loadObjT(std::string model, std::string mtl_dir)
 		textures.emplace_back(tex);
 	}
 	verticeCount=attrib.vertices.size()/3;
-	vertices.swap(make_aligned_array<float>(16,4*sizeof(float)*verticeCount));
+	auto pNew=make_aligned_array<float>(16,4*sizeof(float)*verticeCount);
+	vertices.swap(pNew);
 	__m128 oneC=_mm_set1_ps(1.0f);
 	float* vSrc=attrib.vertices.data();
 	float* vDst=vertices.get();
