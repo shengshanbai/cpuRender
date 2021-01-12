@@ -13,8 +13,8 @@ int main() {
 	cv::Mat offset = (cv::Mat_<float>(3, 1) << 2.644506772359212050e+02,1.784243663152058730e+02,-1.138961051305135044e+02);
     ObjModel objModel;
     auto start = chrono::system_clock::now();
-    for(int i=0;i<10;i++){
-        objModel.loadObj("../data/toukui/toukui.obj","../data/toukui");
+    objModel.loadObj("../data/toukui/toukui.obj","../data/toukui");
+    for(int i=0;i<20;i++){
         objModel.transform(R,offset);
     }
     auto end = chrono::system_clock::now();

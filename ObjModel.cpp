@@ -26,6 +26,7 @@ bool ObjModel::loadObj(std::string model, std::string mtl_dir)
 	return ret;
 }
 
+//花费了0.241844秒
 cv::Mat ObjModel::transform(cv::Mat& R, cv::Mat& offset)
 {
 	cv::Mat result;
