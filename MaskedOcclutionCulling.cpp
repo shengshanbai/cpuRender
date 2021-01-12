@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cstdio>
 #include <cassert>
+#include <float.h>
 
 using namespace std;
 

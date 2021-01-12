@@ -12,5 +12,7 @@ MaskedOcclutionCulling.cpp
 tiny_obj_loader.cpp
 ObjModel.cpp)
 
+add_compile_options(-mavx2 -mfma -msse4.1)
+
 ADD_EXECUTABLE(cpuRender ${SOURCE})
 target_link_libraries(cpuRender ${OpenCV_LIBS})
