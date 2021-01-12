@@ -26,10 +26,11 @@ int main() {
     pRtMat[11]=-1.138961051305135044e+02;
     ObjModel objModel;
     auto start = chrono::system_clock::now();
-    objModel.loadObjT("../data/toukui/toukui.obj","../data/toukui");
+    objModel.loadObj("../data/toukui/toukui.obj","../data/toukui");
     for(int i=0;i<20;i++){
-        auto pOut=objModel.transformT(pRtMat);
-        cout<<"data:"<<pOut[0]<<","<<pOut[1]<<","<<pOut[2]<<endl;
+        auto pOut=objModel.transform(R,offset);
+        cout<<"data:"<<pOut.at<float>(0,0)<<","<<pOut.at<float>(0,1)<<","<<pOut.at<float>(0,2)<<endl;
+        //data:264.547,178.389,-113.877
     }
     auto end = chrono::system_clock::now();
     auto duration = chrono::duration_cast<chrono::microseconds>(end - start);
