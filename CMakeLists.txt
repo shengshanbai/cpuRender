@@ -8,7 +8,9 @@ find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
 set(SOURCE main.cpp
-MaskedOcclutionCulling.cpp)
+MaskedOcclutionCulling.cpp
+tiny_obj_loader.cpp
+ObjModel.cpp)
 
 ADD_EXECUTABLE(cpuRender ${SOURCE})
 target_link_libraries(cpuRender ${OpenCV_LIBS})
