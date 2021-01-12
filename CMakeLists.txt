@@ -10,7 +10,8 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 set(SOURCE main.cpp
 MaskedOcclutionCulling.cpp
 tiny_obj_loader.cpp
-ObjModel.cpp)
+ObjModel.cpp
+utils.cpp)
 
 add_compile_options(-mavx2 -mfma -msse4.1)
 
