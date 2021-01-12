@@ -28,7 +28,8 @@ int main() {
     auto start = chrono::system_clock::now();
     objModel.loadObjT("../data/toukui/toukui.obj","../data/toukui");
     for(int i=0;i<20;i++){
-        objModel.transformT(pRtMat);
+        auto pOut=objModel.transformT(pRtMat);
+        cout<<"data:"<<pOut[0]<<","<<pOut[1]<<","<<pOut[2]<<endl;
     }
     auto end = chrono::system_clock::now();
     auto duration = chrono::duration_cast<chrono::microseconds>(end - start);

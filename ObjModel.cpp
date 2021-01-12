@@ -76,6 +76,7 @@ cv::Mat ObjModel::transform(cv::Mat& R, cv::Mat& offset)
 	return result.t();
 }
 
+//花费了0.018364秒
 std::unique_ptr<float[],free_delete> ObjModel::transformT(std::unique_ptr<float[],free_delete>& rtMat)
 {
 	auto result=make_aligned_array<float>(16,4*sizeof(float)*verticeCount);
