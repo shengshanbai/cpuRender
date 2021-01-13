@@ -1,24 +1,38 @@
-#include "MaskedOcclutionCulling.h"
 #include "ObjModel.h"
 #include <iostream>
 #include <chrono>
 #include <opencv2/opencv.hpp>
 
+#ifdef _WIN32
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
+#endif
+
 using namespace std;
 
+void onMouse(int event,int x, int y,int flags,void* param) {
+
+}
+
+void mainLoop() {
+	string windowName = "main";
+	int windowWidth = 864;
+	int windowHight = 480;
+	cv::namedWindow(windowName, cv::WINDOW_NORMAL);
+	cv::resizeWindow(windowName, cv::Size(windowWidth, windowHight));
+	cv::setMouseCallback(windowName, onMouse, 0);
+	cv::Mat image(windowHight, windowWidth, CV_8UC4);
+	while (cv::getWindowProperty(windowName, cv::WND_PROP_VISIBLE) == 1)
+	{
+		cv::imshow(windowName, image);
+		int key_code = cv::waitKey(20);
+	}
+	cv::destroyWindow(windowName);
+}
 
 int main() {
-    string windowName="main";
-    int windowWidth=864;
-    int windowHight=480;
-    cv::namedWindow(windowName,cv::WINDOW_NORMAL);
-    cv::resizeWindow(windowName,cv::Size(windowWidth,windowHight));
-    create_aligned_mat(32,windowHight,windowWidth,CV_8UC4);
-    while (cv::getWindowProperty(windowName,cv::WND_PROP_VISIBLE)==1)
-    {
-        /* code */
-    }
-    cv::destroyWindow(windowName);
+	mainLoop();
     /*
     ObjModel objModel;
     auto start = chrono::system_clock::now();
@@ -33,5 +47,8 @@ int main() {
     moc->ClearBuffer();
     MaskedOcclusionCulling::Destroy(moc);
     */
+#ifdef _WIN32
+	_CrtDumpMemoryLeaks();
+#endif
     return 0;
 }
