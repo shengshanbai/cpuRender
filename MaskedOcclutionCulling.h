@@ -1,5 +1,6 @@
 #pragma once
 #include "CompilerSpecific.h"
+#include "ObjModel.h"
 
 class MaskedOcclusionCulling{
     public:
@@ -56,6 +57,7 @@ class MaskedOcclusionCulling{
         static Implementation DetectCPUFeatures();
         void SetResolution(unsigned int width, unsigned int height);
         void ClearBuffer();
+        void renderTriangles(const float* inVtx,const unsigned);
     private:
         MaskedOcclusionCulling();
         ~MaskedOcclusionCulling();

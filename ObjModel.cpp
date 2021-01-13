@@ -25,27 +25,6 @@ bool ObjModel::loadObj(std::string model, std::string mtl_dir)
 		cv::Mat tex=cv::imread(mtl_dir + material.diffuse_texname, cv::IMREAD_UNCHANGED);
 		textures.emplace_back(tex);
 	}
-	worldVertices = cv::Mat(attrib.vertices.size()/3, 3, CV_32FC1, attrib.vertices.data());
-	return ret;
-}
-
-bool ObjModel::loadObjT(std::string model, std::string mtl_dir)
-{
-	std::string warn;
-	std::string err;
-	bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, model.c_str(), mtl_dir.c_str(), true);
-	if(!warn.empty()) {
-		std::cout << warn << std::endl;
-	}
-
-	if (!err.empty()) {
-		std::cerr << err << std::endl;
-	}
-	for (tinyobj::material_t& material : materials)
-	{
-		cv::Mat tex=cv::imread(mtl_dir + material.diffuse_texname, cv::IMREAD_UNCHANGED);
-		textures.emplace_back(tex);
-	}
 	verticeCount=attrib.vertices.size()/3;
 	auto pNew=make_aligned_array<float>(16,4*sizeof(float)*verticeCount);
 	vertices.swap(pNew);
@@ -63,21 +42,8 @@ bool ObjModel::loadObjT(std::string model, std::string mtl_dir)
 	return ret;
 }
 
-//花费了0.169331秒
-cv::Mat ObjModel::transform(cv::Mat& R, cv::Mat& offset)
-{
-	cv::Mat result;
-	result=R*worldVertices.t();
-	for (int c = 0; c < result.cols; ++c) {
-		result.col(c) = result.col(c)+offset;
-		result.col(c).at<float>(0, 0) = cvRound(result.col(c).at<float>(0, 0));
-		result.col(c).at<float>(1, 0) = cvRound(result.col(c).at<float>(1, 0));
-	}
-	return result.t();
-}
-
 //花费了0.018364秒
-std::unique_ptr<float[],free_delete> ObjModel::transformT(std::unique_ptr<float[],free_delete>& rtMat)
+std::unique_ptr<float[],free_delete> ObjModel::transform(std::unique_ptr<float[],free_delete>& rtMat)
 {
 	auto result=make_aligned_array<float>(16,4*sizeof(float)*verticeCount);
 	float* pMat=rtMat.get();
