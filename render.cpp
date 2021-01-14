@@ -71,7 +71,6 @@ void drawModel(ObjModel& model,cv::Mat& image){
             fill_triangle(image, points[0], points[1], points[2], color);
         }
     }
-	cv::flip(image, image, 0);
 }
 
 void sort_point_y(vec2i_t& point0,vec2i_t& point1,vec2i_t& point2){
