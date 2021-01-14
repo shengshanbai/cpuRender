@@ -2,6 +2,7 @@
 #include <iostream>
 #include <chrono>
 #include <opencv2/opencv.hpp>
+#include "render.h"
 
 #ifdef _WIN32
 #define _CRTDBG_MAP_ALLOC
@@ -17,14 +18,15 @@ void onMouse(int event,int x, int y,int flags,void* param) {
 
 void mainLoop() {
 	string windowName = "main";
-	int windowWidth = 864;
-	int windowHight = 480;
+	int windowWidth = 800;
+	int windowHight = 800;
     ObjModel model;
     model.loadObj("./data/african_head.obj","./data");
 	cv::namedWindow(windowName, cv::WINDOW_NORMAL);
 	cv::resizeWindow(windowName, cv::Size(windowWidth, windowHight));
 	cv::setMouseCallback(windowName, onMouse, 0);
 	cv::Mat image(windowHight, windowWidth, CV_8UC4);
+    drawModel(model,image);
 	while (cv::getWindowProperty(windowName, cv::WND_PROP_VISIBLE) == 1)
 	{
 		cv::imshow(windowName, image);

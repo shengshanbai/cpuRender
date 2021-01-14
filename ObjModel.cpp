@@ -62,6 +62,15 @@ bool ObjModel::loadObj(std::string model, std::string mtl_dir)
 	return ret;
 }
 
+int ObjModel::getNumFaces(){
+	return num_faces;
+}
+
+vec3f_t& ObjModel::getVertex(int faceId,int subId){
+	size_t index=faceId*3+subId;
+	return vertices[index];
+}
+
 //花费了0.018364秒
 std::unique_ptr<float[],free_delete> ObjModel::transform(std::unique_ptr<float[],free_delete>& rtMat)
 {
