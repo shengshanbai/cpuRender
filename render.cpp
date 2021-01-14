@@ -1,5 +1,6 @@
 #include "render.h"
 #include "log.h"
+#include <algorithm>
 
 void draw_point(cv::Mat& image, int row, int col, unsigned char color) {
     if (row < 0 || col < 0 || row >= image.rows || col >= image.cols) {
@@ -110,43 +111,54 @@ static vec2i_t lerp_point(vec2i_t& point0, vec2i_t& point1, double& d) {
     return point;
 }
 
+
+/*
+ * using barycentric coordinates, see http://blackpawn.com/texts/pointinpoly/
+ * solve P = A + sAB + tAC
+ *   --> AP = sAB + tAC
+ *   --> s = (AC.y * AP.x - AC.x * AP.y) / (AB.x * AC.y - AB.y * AC.x)
+ *   --> t = (AB.x * AP.y - AB.y * AP.x) / (AB.x * AC.y - AB.y * AC.x)
+ * check if the point is in triangle: (s >= 0) && (t >= 0) && (s + t <= 1)
+ */
+vec3f_t barycentric(vec2i_t& A,vec2i_t& B,vec2i_t& C,vec2i_t& P){
+    vec2i_t AB = vec2i_sub(B, A);
+    vec2i_t AC = vec2i_sub(C, A);
+    vec2i_t AP = vec2i_sub(P, A);
+    double s, t;
+
+    int denom = AB.x * AC.y - AB.y * AC.x;
+    if(denom == 0) {
+        return vec3f_t{-1,1,1};
+    }
+    s = (AC.y * AP.x - AC.x * AP.y) / (double)denom;
+    t = (AB.x * AP.y - AB.y * AP.x) / (double)denom;
+    return vec3f_t{1-(s+t),s,t};
+}
+
+static int in_triangle(vec2i_t& A,vec2i_t& B,vec2i_t& C,vec2i_t& P){
+    vec3f_t center=barycentric(A,B,C,P);
+    return (center.x >=0 && center.y >= 0 && center.z>=0);
+}
+
 void fill_triangle(cv::Mat& image,vec2i_t& point0,vec2i_t& point1,vec2i_t& point2,cv::Vec4b& color){
-    sort_point_y(point0,point1,point2);
-    if(point0.y==point2.y){ //共线
-        sort_point_x(point0,point1,point2);
-        draw_scanline(image,point0,point2,color);
-    }else
+    int width=image.cols;
+    int height=image.rows;
+    int minX=1e6;
+    int minY=1e6;
+    int maxX=0;
+    int maxY=0;
+    minX=std::max(std::min(std::min(std::min(minX,point0.x),point1.x),point2.x),0);
+    minY=std::max(std::min(std::min(std::min(minX,point0.y),point1.y),point2.y),0);
+    maxX=std::min(std::max(std::max(std::max(maxX,point0.x),point1.x),point2.x),width-1);
+    maxY=std::min(std::max(std::max(std::max(maxX,point0.y),point1.y),point2.y),height-1);
+    for (int i = minX; i <=maxX; i++)
     {
-        int total_height = point2.y - point0.y;
-        int upper_height = point1.y - point0.y;
-        int lower_height = point2.y - point1.y;
-
-        if (upper_height == 0) {
-            draw_scanline(image, point0, point1, color);
-        } else {
-            int y;
-            for (y = point0.y; y <= point1.y; y++) {
-                double d1 = (y - point0.y) / (double)upper_height;
-                double d2 = (y - point0.y) / (double)total_height;
-                vec2i_t p1 = lerp_point(point0, point1, d1);
-                vec2i_t p2 = lerp_point(point0, point2, d2);
-                p1.y = p2.y = y;
-                draw_scanline(image, p1, p2, color);
+        for (int j = minY; j < maxY; j++)
+        {
+            vec2i_t p={i,j};
+            if(in_triangle(point0,point1,point2,p)){
+                draw_point(image,p,color);
             }
         }
-
-        if (lower_height == 0) {
-            draw_scanline(image, point1, point2, color);
-        } else {
-            int y;
-            for (y = point1.y; y <= point2.y; y++) {
-                double d0 = (y - point0.y) / (double)total_height;
-                double d1 = (y - point1.y) / (double)lower_height;
-                vec2i_t p0 = lerp_point(point0, point2, d0);
-                vec2i_t p1 = lerp_point(point1, point2, d1);
-                p0.y = p1.y = y;
-                draw_scanline(image, p0, p1, color);
-            }
-        }
-    }  
+    }
 }
