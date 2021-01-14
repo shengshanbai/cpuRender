@@ -1,6 +1,7 @@
 #include "ObjModel.h"
 #include <iostream>
 #include <cstdlib>
+#include "log.h"
 
 using namespace std;
 
@@ -12,33 +13,52 @@ bool ObjModel::loadObj(std::string model, std::string mtl_dir)
 {
 	std::string warn;
 	std::string err;
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
 	bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, model.c_str(), mtl_dir.c_str(), true);
 	if(!warn.empty()) {
-		std::cout << warn << std::endl;
+		DEBUG(warn.c_str());
 	}
 
 	if (!err.empty()) {
-		std::cerr << err << std::endl;
+		FATAL(err.c_str());
 	}
+
 	for (tinyobj::material_t& material : materials)
 	{
 		cv::Mat tex=cv::imread(mtl_dir + material.diffuse_texname, cv::IMREAD_UNCHANGED);
 		textures.emplace_back(tex);
 	}
-	verticeCount=attrib.vertices.size()/3;
-	auto pNew=make_aligned_array<float>(16,4*sizeof(float)*verticeCount);
-	vertices.swap(pNew);
-	__m128 oneC=_mm_set1_ps(1.0f);
-	float* vSrc=attrib.vertices.data();
-	float* vDst=vertices.get();
-	for (size_t i = 0; i < verticeCount; i++)
-	{
-		__m128 srcData=_mm_loadu_ps(vSrc);
-		srcData=_mm_insert_ps(srcData,oneC,0xF0);
-		_mm_store_ps(vDst,srcData);
-		vSrc+=3;
-		vDst+=4;
+	size_t faceNum=0;
+	for (tinyobj::shape_t& shape : shapes) {
+		faceNum+=shape.mesh.num_face_vertices.size();
 	}
+	auto pNewVertices=make_aligned_array<vec3f_t>(32,faceNum*sizeof(vec3f_t));
+	auto pNewUvs=make_aligned_array<vec2f_t>(32,faceNum*sizeof(vec2f_t));
+	auto pNewNormals=make_aligned_array<vec3f_t>(32,faceNum*sizeof(vec3f_t));
+	vec3f_t* dVtx=pNewVertices.get();
+	vec2f_t* dUv=pNewUvs.get();
+	vec3f_t* dNorm=pNewNormals.get();
+	for(tinyobj::shape_t& shape : shapes){
+		for (int faceId = 0; faceId < shape.mesh.num_face_vertices.size(); faceId++) {
+			for(int i=0;i<3;i++){
+				int vid=shape.mesh.indices[3*faceId+i].vertex_index;
+				int uvid=shape.mesh.indices[3*faceId+i].texcoord_index;
+				int normId=shape.mesh.indices[3*faceId+i].normal_index;
+				memcpy(dVtx,&attrib.vertices[3*vid],sizeof(vec3f_t));
+				memcpy(dUv,&attrib.texcoords[2*uvid],sizeof(vec2f_t));
+				memcpy(dNorm,&attrib.normals[3*normId],sizeof(vec3f_t));
+				dVtx++;
+				dUv++;
+				dNorm++;
+			}
+		}
+	}
+	vertices.swap(pNewVertices);
+	uvs.swap(pNewUvs);
+	normals.swap(pNewNormals);
+	num_faces=faceNum;
 	return ret;
 }
 
@@ -46,6 +66,7 @@ bool ObjModel::loadObj(std::string model, std::string mtl_dir)
 std::unique_ptr<float[],free_delete> ObjModel::transform(std::unique_ptr<float[],free_delete>& rtMat)
 {
 	auto result=make_aligned_array<float>(16,4*sizeof(float)*verticeCount);
+	/*
 	float* pMat=rtMat.get();
 	__m128 row0=_mm_load_ps(pMat);
 	__m128 row1=_mm_load_ps(pMat+4);
@@ -60,12 +81,14 @@ std::unique_ptr<float[],free_delete> ObjModel::transform(std::unique_ptr<float[]
 		pVert+=4;
 		pDst+=4;
 	}
+	*/
 	return std::move(result);
 }
 
 cv::Vec4b ObjModel::getMixColor(std::vector<int>& ids, cv::Vec3f& bc_screen)
 {
 	cv::Vec4b bgra(0,0,0,255);
+	/*
 	for (int i = 0; i < 3; i++)
 	{
 		int c = (int)(255 * (attrib.colors[3 * ids[0] + i] * bc_screen[0] +
@@ -74,10 +97,12 @@ cv::Vec4b ObjModel::getMixColor(std::vector<int>& ids, cv::Vec3f& bc_screen)
 		bgra[2 - i] = c > 255 ? 255 : c;
 	}
 	return bgra;
+	*/
 }
 
 cv::Vec4b ObjModel::getTextureColor(int materialId,std::vector<int>& tids, cv::Vec3f& bc_screen)
 {
+	/*
 	cv::Vec4b bgra(0, 0, 0, 255);
 	cv::Mat& tex = textures[materialId];
 	int width = tex.cols;
@@ -103,4 +128,5 @@ cv::Vec4b ObjModel::getTextureColor(int materialId,std::vector<int>& tids, cv::V
 		bgra[2] = color[2];
 		return bgra;
 	}
+	*/
 }

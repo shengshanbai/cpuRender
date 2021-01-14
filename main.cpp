@@ -19,6 +19,8 @@ void mainLoop() {
 	string windowName = "main";
 	int windowWidth = 864;
 	int windowHight = 480;
+    ObjModel model;
+    model.loadObj("./data/african_head.obj","./data");
 	cv::namedWindow(windowName, cv::WINDOW_NORMAL);
 	cv::resizeWindow(windowName, cv::Size(windowWidth, windowHight));
 	cv::setMouseCallback(windowName, onMouse, 0);

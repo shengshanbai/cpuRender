@@ -91,6 +91,11 @@ struct free_delete
 };
 
 template<class T> std::unique_ptr<T[],free_delete> make_aligned_array(int alignment, int length){
+	//保证分配的长度是alignment整数
+	while (length%alignment!=0)
+	{
+		++length;
+	}
     T* raw=static_cast<T*>(aligned_alloc(alignment,length));
     std::unique_ptr<T[], free_delete> pData(raw);
     return std::move(pData);
