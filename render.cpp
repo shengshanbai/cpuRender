@@ -41,27 +41,24 @@ void drawModel(ObjModel& model,cv::Mat& image){
     int width=image.cols;
     int height=image.rows;
     int i, j;
-    vec3f_t light = {0, 0, -1};
+    cv::Vec3f light = {0, 0, -1};
 
     for (i = 0; i < numFaces; i++) {
-        vec2i_t points[3];
-        vec3f_t coords[3];
-        vec3f_t normal;
+        cv::Vec2i points[3];
+        cv::Vec3f coords[3];
+        cv::Vec3f normal;
         float intensity;
         for (j = 0; j < 3; j++) {
-            vec3f_t vertex = model.getVertex(i, j);
-            points[j].x = (int)((vertex.x + 1) / 2 * (width - 1));
-            points[j].y = (int)((vertex.y + 1) / 2 * (height - 1));
-            points[j].y = (height - 1) - points[j].y;
+            cv::Vec3f& vertex = model.getVertex(i, j);
+            points[j][0] = (int)((vertex[0] + 1) / 2 * (width - 1));
+            points[j][1] = (int)((vertex[1] + 1) / 2 * (height - 1));
+            points[j][1] = (height - 1) - points[j][1];
 
             coords[j] = vertex;
         }
-        normal = vec3f_cross(
-            vec3f_sub(coords[2], coords[0]),
-            vec3f_sub(coords[1], coords[0])
-        );
-        normal = vec3f_normalize(normal);
-        intensity = vec3f_dot(normal, light);
+        normal=(coords[2]-coords[0]).cross((coords[1]-coords[0]));
+        normal/=cv::norm(normal);
+        intensity = normal.dot(light);
         if (intensity > 0) {
             cv::Vec4b color;
             color[0] = (unsigned char)(intensity * 255);
@@ -73,59 +70,12 @@ void drawModel(ObjModel& model,cv::Mat& image){
     }
 }
 
-void sort_point_y(vec2i_t& point0,vec2i_t& point1,vec2i_t& point2){
-    if(point0.y>point1.y){
-        std::swap(point0,point1);
-    }
-    if(point0.y>point2.y){
-        std::swap(point0,point2);
-    }
-    if(point1.y>point2.y){
-        std::swap(point1,point2);
-    }
-}
-
-void sort_point_x(vec2i_t& point0,vec2i_t& point1,vec2i_t& point2){
-    if(point0.x>point1.x){
-        std::swap(point0,point1);
-    }
-    if(point0.x>point2.x){
-        std::swap(point0,point2);
-    }
-    if(point1.x>point2.x){
-        std::swap(point1,point2);
-    }
-}
-
-void draw_point(cv::Mat& image, vec2i_t& point, cv::Vec4b& color) {
+void draw_point(cv::Mat& image, cv::Vec2i& point, cv::Vec4b& color) {
     if (point.x < 0 || point.y < 0 || point.y >= image.rows || point.x >= image.cols) {
         return;
     } else {
-        image.at<cv::Vec4b>(point.y,point.x)=color;
+        image.at<cv::Vec4b>(point[1],point[0])=color;
     }
-}
-
-static void draw_scanline(cv::Mat& image,vec2i_t& point0,vec2i_t& point1,
-                          cv::Vec4b& color) {
-    vec2i_t point;
-    FORCE(point0.y == point1.y, "draw_scanline: diff y");
-    if (point0.x > point1.x) {
-        std::swap(point0, point1);
-    }
-    for (point = point0; point.x <= point1.x; point.x += 1) {
-        draw_point(image, point, color);
-    }
-}
-
-static int linear_interp(int& v0, int& v1, double& d) {
-    return (int)(v0 + (v1 - v0) * d + 0.5);
-}
-
-static vec2i_t lerp_point(vec2i_t& point0, vec2i_t& point1, double& d) {
-    vec2i_t point;
-    point.x = linear_interp(point0.x, point1.x, d);
-    point.y = linear_interp(point0.y, point1.y, d);
-    return point;
 }
 
 
@@ -137,37 +87,37 @@ static vec2i_t lerp_point(vec2i_t& point0, vec2i_t& point1, double& d) {
  *   --> t = (AB.x * AP.y - AB.y * AP.x) / (AB.x * AC.y - AB.y * AC.x)
  * check if the point is in triangle: (s >= 0) && (t >= 0) && (s + t <= 1)
  */
-vec3f_t barycentric(vec2i_t& A,vec2i_t& B,vec2i_t& C,vec2i_t& P){
-    vec2i_t AB = vec2i_sub(B, A);
-    vec2i_t AC = vec2i_sub(C, A);
-    vec2i_t AP = vec2i_sub(P, A);
+cv::Vec3f barycentric(cv::Vec2i& A,cv::Vec2i& B,cv::Vec2i& C,cv::Vec2i& P){
+    cv::Vec2i AB = B-A;
+    cv::Vec2i AC = C-A;
+    cv::Vec2i AP = P-A;
 	float s, t;
 
-    int denom = AB.x * AC.y - AB.y * AC.x;
+    int denom = AB[0]* AC[1] - AB[1] * AC[0];
     if(denom == 0) {
-        return vec3f_t{-1,1,1};
+        return cv::Vec3f(-1,1,1);
     }
     s = static_cast<float>((AC.y * AP.x - AC.x * AP.y) / (double)denom);
     t = static_cast<float>((AB.x * AP.y - AB.y * AP.x) / (double)denom);
-    return vec3f_t{1.0f-(s+t),s,t};
+    return cv::Vec3f{1.0f-(s+t),s,t};
 }
 
-static int in_triangle(vec2i_t& A,vec2i_t& B,vec2i_t& C,vec2i_t& P){
+static int in_triangle(cv::Vec2i& A,cv::Vec2i& B,cv::Vec2i& C,cv::Vec2i& P){
     vec3f_t center=barycentric(A,B,C,P);
-    return (center.x >=0 && center.y >= 0 && center.z>=0);
+    return (center[0] >=0 && center[1] >= 0 && center[2]>=0);
 }
 
-void fill_triangle(cv::Mat& image,vec2i_t& point0,vec2i_t& point1,vec2i_t& point2,cv::Vec4b& color){
+void fill_triangle(cv::Mat& image,cv::Vec2i& point0,cv::Vec2i& point1,cv::Vec2i& point2,cv::Vec4b& color){
     int width=image.cols;
     int height=image.rows;
     int minX=1e6;
     int minY=1e6;
     int maxX=0;
     int maxY=0;
-    minX=std::max(std::min(std::min(std::min(minX,point0.x),point1.x),point2.x),0);
-    minY=std::max(std::min(std::min(std::min(minX,point0.y),point1.y),point2.y),0);
-    maxX=std::min(std::max(std::max(std::max(maxX,point0.x),point1.x),point2.x),width-1);
-    maxY=std::min(std::max(std::max(std::max(maxX,point0.y),point1.y),point2.y),height-1);
+    minX=std::max(std::min(std::min(std::min(minX,point0[0]),point1[0]),point2[0]),0);
+    minY=std::max(std::min(std::min(std::min(minX,point0[1]),point1[1]),point2[1]),0);
+    maxX=std::min(std::max(std::max(std::max(maxX,point0[0]),point1[0]),point2[0]),width-1);
+    maxY=std::min(std::max(std::max(std::max(maxX,point0[1]),point1[1]),point2[1]),height-1);
     for (int i = minX; i <=maxX; i++)
     {
         for (int j = minY; j < maxY; j++)

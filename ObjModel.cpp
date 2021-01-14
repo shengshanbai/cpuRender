@@ -34,21 +34,21 @@ bool ObjModel::loadObj(std::string model, std::string mtl_dir)
 	for (tinyobj::shape_t& shape : shapes) {
 		faceNum+=shape.mesh.num_face_vertices.size();
 	}
-	auto pNewVertices=make_aligned_array<vec3f_t>(32,3*faceNum*sizeof(vec3f_t));
-	auto pNewUvs=make_aligned_array<vec2f_t>(32,3*faceNum*sizeof(vec2f_t));
-	auto pNewNormals=make_aligned_array<vec3f_t>(32,3*faceNum*sizeof(vec3f_t));
-	vec3f_t* dVtx=pNewVertices.get();
-	vec2f_t* dUv=pNewUvs.get();
-	vec3f_t* dNorm=pNewNormals.get();
+	auto pNewVertices=make_aligned_array<cv::Vec4f>(32,3*faceNum*sizeof(cv::Vec4f));
+	auto pNewUvs=make_aligned_array<cv::Vec2f>(32,3*faceNum*sizeof(cv::Vec2f));
+	auto pNewNormals=make_aligned_array<cv::Vec4f>(32,3*faceNum*sizeof(cv::Vec4f));
+	cv::Vec4f* dVtx=pNewVertices.get();
+	cv::Vec2f* dUv=pNewUvs.get();
+	cv::Vec4f* dNorm=pNewNormals.get();
 	for(tinyobj::shape_t& shape : shapes){
 		for (int faceId = 0; faceId < shape.mesh.num_face_vertices.size(); faceId++) {
 			for(int i=0;i<3;i++){
 				int vid=shape.mesh.indices[3*faceId+i].vertex_index;
 				int uvid=shape.mesh.indices[3*faceId+i].texcoord_index;
 				int normId=shape.mesh.indices[3*faceId+i].normal_index;
-				memcpy(dVtx,&attrib.vertices[3*vid],sizeof(vec3f_t));
-				memcpy(dUv,&attrib.texcoords[2*uvid],sizeof(vec2f_t));
-				memcpy(dNorm,&attrib.normals[3*normId],sizeof(vec3f_t));
+				memcpy(dVtx,&attrib.vertices[3*vid],sizeof(float)*3);
+				memcpy(dUv,&attrib.texcoords[2*uvid],sizeof(float)*2);
+				memcpy(dNorm,&attrib.normals[3*normId],sizeof(float)*3);
 				dVtx++;
 				dUv++;
 				dNorm++;
@@ -66,7 +66,7 @@ int ObjModel::getNumFaces(){
 	return num_faces;
 }
 
-vec3f_t& ObjModel::getVertex(int faceId,int subId){
+cv::Vec4f& ObjModel::getVertex(int faceId,int subId){
 	size_t index=faceId*3+subId;
 	return vertices[index];
 }
