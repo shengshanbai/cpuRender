@@ -12,10 +12,10 @@
 
 using namespace std;
 
-cv::Vec4b white = {255, 255, 255};
-cv::Vec4b blue = {255, 0, 0};
-cv::Vec4b green = {0, 255, 0};
-cv::Vec4b red = {0, 0, 255};
+cv::Vec4b white = {255, 255, 255,255};
+cv::Vec4b blue = {255, 0, 0,255};
+cv::Vec4b green = {0, 255, 0,255};
+cv::Vec4b red = {0, 0, 255,255};
 
 vec2i_t t0[3] = {{10, 70}, {50, 160}, {70, 80}};
 vec2i_t t1[3] = {{180, 50}, {150, 1}, {70, 180}};
