@@ -5,7 +5,7 @@ void draw_point(cv::Mat& image, int row, int col, unsigned char color) {
     if (row < 0 || col < 0 || row >= image.rows || col >= image.cols) {
         return;
     } else {
-        image.at<cv::Vec4b>(row,col)[3]=color;
+        image.at<cv::Vec4b>(row,col)=cv::Vec4b(0,0,color,255);
     }
 }
 
@@ -52,4 +52,5 @@ void drawModel(ObjModel& model,cv::Mat& image){
             draw_line(image, x0, y0, x1, y1);
         }
     }
+	cv::flip(image, image, 0);
 }

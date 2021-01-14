@@ -11,7 +11,9 @@ set(SOURCE main.cpp
 tiny_obj_loader.cpp
 ObjModel.cpp
 utils.cpp
-geometry.cpp)
+geometry.cpp
+log.cpp
+render.cpp)
 
 add_compile_options(-mavx2 -mfma -msse4.1)
 

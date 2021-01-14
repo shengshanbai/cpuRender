@@ -34,9 +34,9 @@ bool ObjModel::loadObj(std::string model, std::string mtl_dir)
 	for (tinyobj::shape_t& shape : shapes) {
 		faceNum+=shape.mesh.num_face_vertices.size();
 	}
-	auto pNewVertices=make_aligned_array<vec3f_t>(32,faceNum*sizeof(vec3f_t));
-	auto pNewUvs=make_aligned_array<vec2f_t>(32,faceNum*sizeof(vec2f_t));
-	auto pNewNormals=make_aligned_array<vec3f_t>(32,faceNum*sizeof(vec3f_t));
+	auto pNewVertices=make_aligned_array<vec3f_t>(32,3*faceNum*sizeof(vec3f_t));
+	auto pNewUvs=make_aligned_array<vec2f_t>(32,3*faceNum*sizeof(vec2f_t));
+	auto pNewNormals=make_aligned_array<vec3f_t>(32,3*faceNum*sizeof(vec3f_t));
 	vec3f_t* dVtx=pNewVertices.get();
 	vec2f_t* dUv=pNewUvs.get();
 	vec3f_t* dNorm=pNewNormals.get();
@@ -74,7 +74,7 @@ vec3f_t& ObjModel::getVertex(int faceId,int subId){
 //花费了0.018364秒
 std::unique_ptr<float[],free_delete> ObjModel::transform(std::unique_ptr<float[],free_delete>& rtMat)
 {
-	auto result=make_aligned_array<float>(16,4*sizeof(float)*verticeCount);
+	auto result=make_aligned_array<float>(16,4*sizeof(float));
 	/*
 	float* pMat=rtMat.get();
 	__m128 row0=_mm_load_ps(pMat);
@@ -105,8 +105,8 @@ cv::Vec4b ObjModel::getMixColor(std::vector<int>& ids, cv::Vec3f& bc_screen)
 			attrib.colors[3 * ids[2] + i] * bc_screen[2]));
 		bgra[2 - i] = c > 255 ? 255 : c;
 	}
-	return bgra;
 	*/
+	return bgra;
 }
 
 cv::Vec4b ObjModel::getTextureColor(int materialId,std::vector<int>& tids, cv::Vec3f& bc_screen)
@@ -138,4 +138,5 @@ cv::Vec4b ObjModel::getTextureColor(int materialId,std::vector<int>& tids, cv::V
 		return bgra;
 	}
 	*/
+	return cv::Vec4b(0, 0, 0, 255);
 }
