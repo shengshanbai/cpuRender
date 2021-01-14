@@ -124,15 +124,15 @@ vec3f_t barycentric(vec2i_t& A,vec2i_t& B,vec2i_t& C,vec2i_t& P){
     vec2i_t AB = vec2i_sub(B, A);
     vec2i_t AC = vec2i_sub(C, A);
     vec2i_t AP = vec2i_sub(P, A);
-    double s, t;
+	float s, t;
 
     int denom = AB.x * AC.y - AB.y * AC.x;
     if(denom == 0) {
         return vec3f_t{-1,1,1};
     }
-    s = (AC.y * AP.x - AC.x * AP.y) / (double)denom;
-    t = (AB.x * AP.y - AB.y * AP.x) / (double)denom;
-    return vec3f_t{1-(s+t),s,t};
+    s = static_cast<float>((AC.y * AP.x - AC.x * AP.y) / (double)denom);
+    t = static_cast<float>((AB.x * AP.y - AB.y * AP.x) / (double)denom);
+    return vec3f_t{1.0f-(s+t),s,t};
 }
 
 static int in_triangle(vec2i_t& A,vec2i_t& B,vec2i_t& C,vec2i_t& P){
