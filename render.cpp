@@ -41,16 +41,34 @@ void drawModel(ObjModel& model,cv::Mat& image){
     int width=image.cols;
     int height=image.rows;
     int i, j;
-    for (i = 0; i < numFaces; i++) {
-        for (j = 0; j < 3; j++) {
-            vec3f_t& v0=model.getVertex(i,j);
-            vec3f_t& v1=model.getVertex(i,(j+1)%3);
-            int x0 = (int)((v0.x + 1) / 2 * width);
-            int y0 = (int)((v0.y + 1) / 2 * height);
-            int x1 = (int)((v1.x + 1) / 2 * width);
-            int y1 = (int)((v1.y + 1) / 2 * height);
+    vec3f_t light = {0, 0, -1};
 
-            draw_line(image, x0, y0, x1, y1);
+    for (i = 0; i < numFaces; i++) {
+        vec2i_t points[3];
+        vec3f_t coords[3];
+        vec3f_t normal;
+        float intensity;
+        for (j = 0; j < 3; j++) {
+            vec3f_t vertex = model.getVertex(i, j);
+            points[j].x = (int)((vertex.x + 1) / 2 * (width - 1));
+            points[j].y = (int)((vertex.y + 1) / 2 * (height - 1));
+            points[j].y = (height - 1) - points[j].y;
+
+            coords[j] = vertex;
+        }
+        normal = vec3f_cross(
+            vec3f_sub(coords[2], coords[0]),
+            vec3f_sub(coords[1], coords[0])
+        );
+        normal = vec3f_normalize(normal);
+        intensity = vec3f_dot(normal, light);
+        if (intensity > 0) {
+            cv::Vec4b color;
+            color[0] = (unsigned char)(intensity * 255);
+            color[1] = (unsigned char)(intensity * 255);
+            color[2] = (unsigned char)(intensity * 255);
+            color[3] = 255;
+            fill_triangle(image, points[0], points[1], points[2], color);
         }
     }
 	cv::flip(image, image, 0);
