@@ -1,7 +1,6 @@
 #pragma once
 #include "tiny_obj_loader.h"
 #include "utils.h"
-#include "geometry.h"
 #include <string>
 #include <opencv2/opencv.hpp>
 #include <vector>

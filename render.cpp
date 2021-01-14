@@ -49,12 +49,12 @@ void drawModel(ObjModel& model,cv::Mat& image){
         cv::Vec3f normal;
         float intensity;
         for (j = 0; j < 3; j++) {
-            cv::Vec3f& vertex = model.getVertex(i, j);
+            cv::Vec4f& vertex = model.getVertex(i, j);
             points[j][0] = (int)((vertex[0] + 1) / 2 * (width - 1));
             points[j][1] = (int)((vertex[1] + 1) / 2 * (height - 1));
             points[j][1] = (height - 1) - points[j][1];
 
-            coords[j] = vertex;
+            coords[j] = cv::Vec3f(vertex[0], vertex[1], vertex[2]);
         }
         normal=(coords[2]-coords[0]).cross((coords[1]-coords[0]));
         normal/=cv::norm(normal);
@@ -71,7 +71,7 @@ void drawModel(ObjModel& model,cv::Mat& image){
 }
 
 void draw_point(cv::Mat& image, cv::Vec2i& point, cv::Vec4b& color) {
-    if (point.x < 0 || point.y < 0 || point.y >= image.rows || point.x >= image.cols) {
+    if (point[0] < 0 || point[1] < 0 || point[1] >= image.rows || point[0] >= image.cols) {
         return;
     } else {
         image.at<cv::Vec4b>(point[1],point[0])=color;
@@ -97,13 +97,13 @@ cv::Vec3f barycentric(cv::Vec2i& A,cv::Vec2i& B,cv::Vec2i& C,cv::Vec2i& P){
     if(denom == 0) {
         return cv::Vec3f(-1,1,1);
     }
-    s = static_cast<float>((AC.y * AP.x - AC.x * AP.y) / (double)denom);
-    t = static_cast<float>((AB.x * AP.y - AB.y * AP.x) / (double)denom);
+    s = static_cast<float>((AC[1]* AP[0] - AC[0] * AP[1]) / (double)denom);
+    t = static_cast<float>((AB[0] * AP[1] - AB[1] * AP[0]) / (double)denom);
     return cv::Vec3f{1.0f-(s+t),s,t};
 }
 
 static int in_triangle(cv::Vec2i& A,cv::Vec2i& B,cv::Vec2i& C,cv::Vec2i& P){
-    vec3f_t center=barycentric(A,B,C,P);
+    cv::Vec3f center=barycentric(A,B,C,P);
     return (center[0] >=0 && center[1] >= 0 && center[2]>=0);
 }
 
@@ -122,7 +122,7 @@ void fill_triangle(cv::Mat& image,cv::Vec2i& point0,cv::Vec2i& point1,cv::Vec2i&
     {
         for (int j = minY; j < maxY; j++)
         {
-            vec2i_t p={i,j};
+            cv::Vec2i p={i,j};
             if(in_triangle(point0,point1,point2,p)){
                 draw_point(image,p,color);
             }
