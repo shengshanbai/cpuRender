@@ -12,6 +12,15 @@
 
 using namespace std;
 
+cv::Vec4b white = {255, 255, 255};
+cv::Vec4b blue = {255, 0, 0};
+cv::Vec4b green = {0, 255, 0};
+cv::Vec4b red = {0, 0, 255};
+
+vec2i_t t0[3] = {{10, 70}, {50, 160}, {70, 80}};
+vec2i_t t1[3] = {{180, 50}, {150, 1}, {70, 180}};
+vec2i_t t2[3] = {{180, 150}, {120, 160}, {130, 180}};
+
 void onMouse(int event,int x, int y,int flags,void* param) {
 
 }
@@ -26,7 +35,9 @@ void mainLoop() {
 	cv::resizeWindow(windowName, cv::Size(windowWidth, windowHight));
 	cv::setMouseCallback(windowName, onMouse, 0);
 	cv::Mat image(windowHight, windowWidth, CV_8UC4);
-    drawModel(model,image);
+    fill_triangle(image, t0[0], t0[1], t0[2], blue);
+    fill_triangle(image, t1[0], t1[1], t1[2], green);
+    fill_triangle(image, t2[0], t2[1], t2[2], red);
 	while (cv::getWindowProperty(windowName, cv::WND_PROP_VISIBLE) == 1)
 	{
 		cv::imshow(windowName, image);

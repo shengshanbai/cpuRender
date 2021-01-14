@@ -7,3 +7,6 @@ typedef struct {
 typedef struct {
     float x, y, z;
 } vec3f_t;
+
+typedef struct {int x, y;} vec2i_t;
+typedef struct {int x, y, z;} vec3i_t;
