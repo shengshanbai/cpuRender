@@ -28,6 +28,9 @@ bool ObjModel::loadObj(std::string model, std::string mtl_dir)
 	for (tinyobj::material_t& material : materials)
 	{
 		cv::Mat tex=cv::imread(mtl_dir + material.diffuse_texname, cv::IMREAD_UNCHANGED);
+		if(tex.channels()==3){
+			cv::cvtColor(tex,tex,cv::COLOR_BGR2BGRA);
+		}
 		textures.emplace_back(tex);
 	}
 	size_t faceNum=0;
@@ -69,6 +72,15 @@ int ObjModel::getNumFaces(){
 cv::Vec4f& ObjModel::getVertex(int faceId,int subId){
 	size_t index=faceId*3+subId;
 	return vertices[index];
+}
+
+cv::Vec2f& ObjModel::getUV(int faceId,int subId){
+	size_t index=faceId*3+subId;
+	return uvs[index];
+}
+
+cv::Mat& ObjModel::getTexture(){
+	return textures[0];
 }
 
 //花费了0.018364秒

@@ -41,31 +41,30 @@ void drawModel(ObjModel& model,cv::Mat& image){
     int width=image.cols;
     int height=image.rows;
     int i, j;
-    cv::Vec3f light = {0, 0, -1};
 
+    cv::Vec3f light = {0, 0, -1};
+    cv::Mat zbuffer(height,width,CV_32FC1,cv::Scalar(FLT_MIN));
     for (i = 0; i < numFaces; i++) {
-        cv::Vec2i points[3];
+        cv::Vec3f points[3];
         cv::Vec3f coords[3];
         cv::Vec3f normal;
+        cv::Vec2f uvs[3];
         float intensity;
         for (j = 0; j < 3; j++) {
             cv::Vec4f& vertex = model.getVertex(i, j);
             points[j][0] = (int)((vertex[0] + 1) / 2 * (width - 1));
             points[j][1] = (int)((vertex[1] + 1) / 2 * (height - 1));
             points[j][1] = (height - 1) - points[j][1];
+            points[j][2]=vertex[2];
 
             coords[j] = cv::Vec3f(vertex[0], vertex[1], vertex[2]);
+            uvs[j]=model.getUV(i,j);
         }
         normal=(coords[2]-coords[0]).cross((coords[1]-coords[0]));
         normal/=cv::norm(normal);
         intensity = normal.dot(light);
         if (intensity > 0) {
-            cv::Vec4b color;
-            color[0] = (unsigned char)(intensity * 255);
-            color[1] = (unsigned char)(intensity * 255);
-            color[2] = (unsigned char)(intensity * 255);
-            color[3] = 255;
-            fill_triangle(image, points[0], points[1], points[2], color);
+            fill_triangle(image, points[0], points[1], points[2],uvs[0],uvs[1],uvs[2],zbuffer,model.getTexture(),intensity);
         }
     }
 }
@@ -102,29 +101,58 @@ cv::Vec3f barycentric(cv::Vec2i& A,cv::Vec2i& B,cv::Vec2i& C,cv::Vec2i& P){
     return cv::Vec3f{1.0f-(s+t),s,t};
 }
 
+cv::Vec3f barycentric(cv::Vec3f& A,cv::Vec3f& B,cv::Vec3f& C,cv::Vec3f& P){
+    cv::Vec3f AB = B-A;
+    cv::Vec3f AC = C-A;
+    cv::Vec3f AP = P-A;
+	float s, t;
+
+    int denom = AB[0]* AC[1] - AB[1] * AC[0];
+    if(denom == 0) {
+        return cv::Vec3f(-1,1,1);
+    }
+    s = static_cast<float>((AC[1]* AP[0] - AC[0] * AP[1]) / (double)denom);
+    t = static_cast<float>((AB[0] * AP[1] - AB[1] * AP[0]) / (double)denom);
+    return cv::Vec3f{1.0f-(s+t),s,t};
+}
+
 static int in_triangle(cv::Vec2i& A,cv::Vec2i& B,cv::Vec2i& C,cv::Vec2i& P){
     cv::Vec3f center=barycentric(A,B,C,P);
     return (center[0] >=0 && center[1] >= 0 && center[2]>=0);
 }
 
-void fill_triangle(cv::Mat& image,cv::Vec2i& point0,cv::Vec2i& point1,cv::Vec2i& point2,cv::Vec4b& color){
+void fill_triangle(cv::Mat& image,cv::Vec3f& point0,cv::Vec3f& point1,cv::Vec3f& point2,
+    cv::Vec2f& uv0,cv::Vec2f& uv1,cv::Vec2f& uv2,cv::Mat& zbuffer,cv::Mat& texture,float intensity){
     int width=image.cols;
     int height=image.rows;
-    int minX=1e6;
-    int minY=1e6;
-    int maxX=0;
-    int maxY=0;
-    minX=std::max(std::min(std::min(std::min(minX,point0[0]),point1[0]),point2[0]),0);
-    minY=std::max(std::min(std::min(std::min(minX,point0[1]),point1[1]),point2[1]),0);
-    maxX=std::min(std::max(std::max(std::max(maxX,point0[0]),point1[0]),point2[0]),width-1);
-    maxY=std::min(std::max(std::max(std::max(maxX,point0[1]),point1[1]),point2[1]),height-1);
+
+    int tex_width=texture.cols;
+    int tex_height=texture.rows;
+
+    int minX=static_cast<int>(std::max(std::min(std::min(point0[0],point1[0]),point2[0]),0.0f));
+    int minY=static_cast<int>(std::max(std::min(std::min(point0[1],point1[1]),point2[1]),0.0f));
+    int maxX=static_cast<int>(std::min(std::max(std::max(point0[0],point1[0]),point2[0]),(float)width-1));
+    int maxY=static_cast<int>(std::min(std::max(std::max(point0[1],point1[1]),point2[1]),(float)height-1));
     for (int i = minX; i <=maxX; i++)
     {
-        for (int j = minY; j < maxY; j++)
+        for (int j = minY; j <= maxY; j++)
         {
-            cv::Vec2i p={i,j};
-            if(in_triangle(point0,point1,point2,p)){
-                draw_point(image,p,color);
+            cv::Vec3f P(i,j,1);
+            cv::Vec3f baryC=barycentric(point0,point1,point2,P);
+            if(baryC[0] >=0 && baryC[1] >= 0 && baryC[2]>=0){ //在三角形内部
+                float z=baryC[0]*point0[2]+baryC[1]*point1[2]+baryC[2]*point2[2];
+                if (zbuffer.at<float>(j,i)<z){
+                    float tex_x=baryC[0]*uv0[0]+baryC[1]*uv1[0]+baryC[2]*uv2[0];
+                    float tex_y=baryC[0]*uv0[1]+baryC[1]*uv1[1]+baryC[2]*uv2[1];
+                    int t_x = (int)(tex_x * (tex_width - 1));
+                    int t_y = (int)(tex_y * (tex_height - 1));
+                    cv::Vec4b color=texture.at<cv::Vec4b>(t_y,t_x);
+                    color[0]=cv::saturate_cast<uchar>(color[0]*intensity);
+                    color[1]=cv::saturate_cast<uchar>(color[1]*intensity);
+                    color[2]=cv::saturate_cast<uchar>(color[2]*intensity);
+                    image.at<cv::Vec4b>(j,i)=color;
+                    zbuffer.at<float>(j,i)=z;
+                }
             }
         }
     }

@@ -16,6 +16,8 @@ public:
 	cv::Vec4b getTextureColor(int materialId, std::vector<int>& tids, cv::Vec3f& bc_screen);
 	int getNumFaces();
 	cv::Vec4f& getVertex(int faceId,int subId);
+	cv::Vec2f& getUV(int faceId,int subId);
+	cv::Mat& getTexture();
 private:
 	std::unique_ptr<cv::Vec4f[],free_delete> vertices;
 	std::unique_ptr<cv::Vec2f[],free_delete> uvs;
