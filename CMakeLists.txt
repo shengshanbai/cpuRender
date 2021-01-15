@@ -8,11 +8,18 @@ find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
 set(SOURCE main.cpp
+tiny_obj_loader.h
 tiny_obj_loader.cpp
+ObjModel.h
 ObjModel.cpp
+utils.h
 utils.cpp
+log.h
 log.cpp
-render.cpp)
+render.h
+render.cpp
+CompilerSpecific.h
+)
 
 add_compile_options(-mavx2 -mfma -msse4.1)
 

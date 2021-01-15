@@ -59,6 +59,7 @@ void drawModel(ObjModel& model,cv::Mat& image){
 
             coords[j] = cv::Vec3f(vertex[0], vertex[1], vertex[2]);
             uvs[j]=model.getUV(i,j);
+			uvs[j][1] = 1.0 - uvs[j][1];
         }
         normal=(coords[2]-coords[0]).cross((coords[1]-coords[0]));
         normal/=cv::norm(normal);
@@ -144,8 +145,8 @@ void fill_triangle(cv::Mat& image,cv::Vec3f& point0,cv::Vec3f& point1,cv::Vec3f&
                 if (zbuffer.at<float>(j,i)<z){
                     float tex_x=baryC[0]*uv0[0]+baryC[1]*uv1[0]+baryC[2]*uv2[0];
                     float tex_y=baryC[0]*uv0[1]+baryC[1]*uv1[1]+baryC[2]*uv2[1];
-                    int t_x = (int)(tex_x * (tex_width - 1));
-                    int t_y = (int)(tex_y * (tex_height - 1));
+                    int t_x = std::min(std::max(0,(int)(tex_x * (tex_width - 1))),tex_width-1);
+                    int t_y = std::min(std::max(0,(int)(tex_y * (tex_height - 1))),tex_height-1);
                     cv::Vec4b color=texture.at<cv::Vec4b>(t_y,t_x);
                     color[0]=cv::saturate_cast<uchar>(color[0]*intensity);
                     color[1]=cv::saturate_cast<uchar>(color[1]*intensity);

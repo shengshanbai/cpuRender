@@ -27,7 +27,10 @@ bool ObjModel::loadObj(std::string model, std::string mtl_dir)
 
 	for (tinyobj::material_t& material : materials)
 	{
-		cv::Mat tex=cv::imread(mtl_dir + material.diffuse_texname, cv::IMREAD_UNCHANGED);
+		cv::Mat tex=cv::imread(mtl_dir +"/"+material.diffuse_texname, cv::IMREAD_UNCHANGED);
+		if (tex.empty()) {
+			FATAL(("can not load material:"+ material.diffuse_texname).c_str());
+		}
 		if(tex.channels()==3){
 			cv::cvtColor(tex,tex,cv::COLOR_BGR2BGRA);
 		}
