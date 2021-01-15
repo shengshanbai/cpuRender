@@ -21,12 +21,12 @@ void mainLoop() {
 	int windowWidth = 800;
 	int windowHight = 800;
     ObjModel model;
-    model.loadObj("../data/head/african_head.obj","../data/head");
+    model.loadObj("../data/toukui/toukui.obj","../data/toukui");
 	cv::namedWindow(windowName, cv::WINDOW_NORMAL);
 	cv::resizeWindow(windowName, cv::Size(windowWidth, windowHight));
 	cv::setMouseCallback(windowName, onMouse, 0);
 	cv::Mat image(windowHight, windowWidth, CV_8UC4);
-    drawModel(model,image);
+	RenderContext rcontext(windowWidth, windowHight);
 	while (cv::getWindowProperty(windowName, cv::WND_PROP_VISIBLE) == 1)
 	{
 		cv::imshow(windowName, image);

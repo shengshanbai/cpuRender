@@ -122,6 +122,11 @@ static int in_triangle(cv::Vec2i& A,cv::Vec2i& B,cv::Vec2i& C,cv::Vec2i& P){
     return (center[0] >=0 && center[1] >= 0 && center[2]>=0);
 }
 
+void drawModel(RenderContext & context, ObjModel & model, cv::Mat & diffuse_map, cv::Mat & normal_map, cv::Mat & specular_map)
+{
+
+}
+
 void fill_triangle(cv::Mat& image,cv::Vec3f& point0,cv::Vec3f& point1,cv::Vec3f& point2,
     cv::Vec2f& uv0,cv::Vec2f& uv1,cv::Vec2f& uv2,cv::Mat& zbuffer,cv::Mat& texture,float intensity){
     int width=image.cols;
@@ -157,4 +162,25 @@ void fill_triangle(cv::Mat& image,cv::Vec3f& point0,cv::Vec3f& point1,cv::Vec3f&
             }
         }
     }
+}
+
+RenderContext::RenderContext(int width, int height)
+{
+	framebuffer.create(height, width, CV_8UC4);
+	depthbuffer.create(height,width,CV_32FC1);
+	clearDepthBuffer();
+}
+
+RenderContext::~RenderContext()
+{
+}
+
+void RenderContext::clearDepthBuffer()
+{
+	depthbuffer.setTo(cv::Scalar(0.0));
+}
+
+void RenderContext::drawModel(ObjModel & model, cv::Mat4f & transform)
+{
+
 }

@@ -34,36 +34,16 @@ bool ObjModel::loadObj(std::string model, std::string mtl_dir)
 		if(tex.channels()==3){
 			cv::cvtColor(tex,tex,cv::COLOR_BGR2BGRA);
 		}
-		textures.emplace_back(tex);
+		diffuseTextures.emplace_back(tex);
 	}
 	size_t faceNum=0;
 	for (tinyobj::shape_t& shape : shapes) {
 		faceNum+=shape.mesh.num_face_vertices.size();
 	}
-	auto pNewVertices=make_aligned_array<cv::Vec4f>(32,3*faceNum*sizeof(cv::Vec4f));
-	auto pNewUvs=make_aligned_array<cv::Vec2f>(32,3*faceNum*sizeof(cv::Vec2f));
-	auto pNewNormals=make_aligned_array<cv::Vec4f>(32,3*faceNum*sizeof(cv::Vec4f));
-	cv::Vec4f* dVtx=pNewVertices.get();
-	cv::Vec2f* dUv=pNewUvs.get();
-	cv::Vec4f* dNorm=pNewNormals.get();
-	for(tinyobj::shape_t& shape : shapes){
-		for (int faceId = 0; faceId < shape.mesh.num_face_vertices.size(); faceId++) {
-			for(int i=0;i<3;i++){
-				int vid=shape.mesh.indices[3*faceId+i].vertex_index;
-				int uvid=shape.mesh.indices[3*faceId+i].texcoord_index;
-				int normId=shape.mesh.indices[3*faceId+i].normal_index;
-				memcpy(dVtx,&attrib.vertices[3*vid],sizeof(float)*3);
-				memcpy(dUv,&attrib.texcoords[2*uvid],sizeof(float)*2);
-				memcpy(dNorm,&attrib.normals[3*normId],sizeof(float)*3);
-				dVtx++;
-				dUv++;
-				dNorm++;
-			}
-		}
-	}
-	vertices.swap(pNewVertices);
-	uvs.swap(pNewUvs);
-	normals.swap(pNewNormals);
+	materalCount = materials.size();
+	int pointCount = attrib.vertices.size() / 3;
+	vertices.swap(make_aligned_array<cv::Vec4f>(32, pointCount));
+	copyVertices(attrib.vertices.data(), vertices, pointCount);
 	num_faces=faceNum;
 	return ret;
 }
@@ -82,8 +62,9 @@ cv::Vec2f& ObjModel::getUV(int faceId,int subId){
 	return uvs[index];
 }
 
-cv::Mat& ObjModel::getTexture(){
-	return textures[0];
+void ObjModel::copyVertices(float * src, std::unique_ptr<cv::Vec4f[], free_delete> & dst, int vCount)
+{
+	__m256 srcData=_mm256_loadu_ps(src);
 }
 
 //花费了0.018364秒

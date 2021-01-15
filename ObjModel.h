@@ -17,12 +17,17 @@ public:
 	int getNumFaces();
 	cv::Vec4f& getVertex(int faceId,int subId);
 	cv::Vec2f& getUV(int faceId,int subId);
-	cv::Mat& getTexture();
 private:
-	std::unique_ptr<cv::Vec4f[],free_delete> vertices;
-	std::unique_ptr<cv::Vec2f[],free_delete> uvs;
-	std::unique_ptr<cv::Vec4f[],free_delete> normals;
+	void copyVertices(float* src, std::unique_ptr<cv::Vec4f[], free_delete>& dst,int vCount);
+
+	std::unique_ptr<cv::Vec4f[], free_delete> vertices;
+	std::unique_ptr<cv::Vec2f[], free_delete> uvs;
+	std::unique_ptr<cv::Vec4f[], free_delete> normals;
+	std::unique_ptr<cv::Vec4f[], free_delete> verticeColors;
+	std::unique_ptr<int[], free_delete> materialIds;
+	std::unique_ptr<cv::Vec3i[], free_delete> faces;
 	int num_faces;
-	std::vector<cv::Mat> textures;
+	int materalCount;
+	std::vector<cv::Mat> diffuseTextures;
 };
 
