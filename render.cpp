@@ -65,7 +65,7 @@ void drawModel(ObjModel& model,cv::Mat& image){
         normal/=cv::norm(normal);
         intensity = normal.dot(light);
         if (intensity > 0) {
-            fill_triangle(image, points[0], points[1], points[2],uvs[0],uvs[1],uvs[2],zbuffer,model.getTexture(),intensity);
+            //fill_triangle(image, points[0], points[1], points[2],uvs[0],uvs[1],uvs[2],zbuffer,model.getTexture(),intensity);
         }
     }
 }

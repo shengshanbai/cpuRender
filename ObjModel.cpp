@@ -64,8 +64,23 @@ cv::Vec2f& ObjModel::getUV(int faceId,int subId){
 
 void ObjModel::copyVertices(float * src, std::unique_ptr<cv::Vec4f[], free_delete> & dst, int vCount)
 {
-	__m256 srcData=_mm256_loadu_ps(src);
-	__m256 xyzwD=_mm256_permute
+	static __m256i srcIdx = _mm256_setr_epi32(0, 1, 2, 3, 3, 4, 5, 6);
+	static __m256 cOne = _mm256_set1_ps(1.0f);
+	float* pDst = reinterpret_cast<float*>(dst.get());
+	int i = 0;
+	for (i = 0; i < vCount; i += 2) {
+		__m256 srcData = _mm256_loadu_ps(src);
+		__m256 xyzwD = _mm256_permutevar8x32_ps(srcData, srcIdx);
+		xyzwD = _mm256_blend_ps(xyzwD, cOne, 0x88);
+		_mm256_store_ps(pDst, xyzwD);
+		src += 6;
+		pDst += 8;
+	}
+	if (i != vCount) {
+		memcpy(pDst, src, 3 * sizeof(float));
+		pDst += 3;
+		*pDst = 1.0f;
+	}
 }
 
 //花费了0.018364秒
