@@ -12,6 +12,7 @@
 
 using namespace std;
 
+#ifdef _WIN32
 void onMouse(int event,int x, int y,int flags,void* param) {
 
 }
@@ -23,7 +24,7 @@ void mainLoop() {
     ObjModel model;
     model.loadObj("../data/toukui/toukui.obj","../data/toukui");
 	cv::namedWindow(windowName, cv::WINDOW_NORMAL);
-	cv::resizeWindow(windowName, cv::Size(windowWidth, windowHight));
+	cv::resizeWindow(windowName, windowWidth, windowHight);
 	cv::setMouseCallback(windowName, onMouse, 0);
 	cv::Mat image(windowHight, windowWidth, CV_8UC4);
 	RenderContext rcontext(windowWidth, windowHight);
@@ -34,6 +35,16 @@ void mainLoop() {
 	}
 	cv::destroyWindow(windowName);
 }
+#else
+void mainLoop() {
+	string windowName = "main";
+	int windowWidth = 864;
+	int windowHight = 864;
+  ObjModel model;
+  model.loadObj("../data/toukui/toukui.obj","../data/toukui");
+	cv::Mat image(windowHight, windowWidth, CV_8UC4);
+}
+#endif
 
 int main() {
 	mainLoop();

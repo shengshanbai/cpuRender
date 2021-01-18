@@ -42,8 +42,21 @@ bool ObjModel::loadObj(std::string model, std::string mtl_dir)
 	}
 	materalCount = materials.size();
 	int pointCount = attrib.vertices.size() / 3;
-	vertices.swap(make_aligned_array<cv::Vec4f>(32, pointCount));
-	copyVertices(attrib.vertices.data(), vertices, pointCount);
+	auto pNew=make_aligned_array<cv::Vec4f>(32, pointCount);
+	vertices.swap(pNew);
+	copyV3fTo4f(attrib.vertices.data(), vertices, pointCount);
+	auto pNewUV = make_aligned_array<cv::Vec2f>(32,pointCount);
+	uvs.swap(pNewUV);
+	memcpy(reinterpret_cast<void*>(uvs.get()), attrib.texcoords.data(),2*pointCount*sizeof(float));
+	for (size_t i = 0; i < 4; i++)
+	{
+		cout << "src data:" << attrib.texcoords[2 * i] << "," << attrib.texcoords[2 * i + 1] << endl;
+		cout << "dst data:" << uvs[i][0] << "," << uvs[i][1] << endl;
+	}
+	int last = pointCount - 1;
+	cout << "last src data:" << attrib.texcoords[2 * last] << "," << attrib.texcoords[2 * last + 1] << endl;
+	cout << "last dst data:" << uvs[last][0] << "," << uvs[last][1] << endl;
+	abort();
 	num_faces=faceNum;
 	return ret;
 }
@@ -62,7 +75,7 @@ cv::Vec2f& ObjModel::getUV(int faceId,int subId){
 	return uvs[index];
 }
 
-void ObjModel::copyVertices(float * src, std::unique_ptr<cv::Vec4f[], free_delete> & dst, int vCount)
+void ObjModel::copyV3fTo4f(float * src, std::unique_ptr<cv::Vec4f[], free_delete> & dst, int vCount)
 {
 	static __m256i srcIdx = _mm256_setr_epi32(0, 1, 2, 3, 3, 4, 5, 6);
 	static __m256 cOne = _mm256_set1_ps(1.0f);

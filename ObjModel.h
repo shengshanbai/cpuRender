@@ -18,7 +18,7 @@ public:
 	cv::Vec4f& getVertex(int faceId,int subId);
 	cv::Vec2f& getUV(int faceId,int subId);
 private:
-	void copyVertices(float* src, std::unique_ptr<cv::Vec4f[], free_delete>& dst,int vCount);
+	void copyV3fTo4f(float* src, std::unique_ptr<cv::Vec4f[], free_delete>& dst,int vCount);
 
 	std::unique_ptr<cv::Vec4f[], free_delete> vertices;
 	std::unique_ptr<cv::Vec2f[], free_delete> uvs;
