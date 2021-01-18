@@ -14,7 +14,6 @@ bool ObjModel::loadObj(std::string model, std::string mtl_dir)
 	std::string warn;
 	std::string err;
 	tinyobj::attrib_t attrib;
-	std::vector<tinyobj::shape_t> shapes;
 	std::vector<tinyobj::material_t> materials;
 	bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, model.c_str(), mtl_dir.c_str(), true);
 	if(!warn.empty()) {
@@ -41,23 +40,26 @@ bool ObjModel::loadObj(std::string model, std::string mtl_dir)
 		faceNum+=shape.mesh.num_face_vertices.size();
 	}
 	materalCount = materials.size();
-	int pointCount = attrib.vertices.size() / 3;
-	auto pNew=make_aligned_array<cv::Vec4f>(32, pointCount);
-	vertices.swap(pNew);
-	copyV3fTo4f(attrib.vertices.data(), vertices, pointCount);
-	auto pNewUV = make_aligned_array<cv::Vec2f>(32,pointCount);
-	uvs.swap(pNewUV);
-	memcpy(reinterpret_cast<void*>(uvs.get()), attrib.texcoords.data(),2*pointCount*sizeof(float));
-	for (size_t i = 0; i < 4; i++)
-	{
-		cout << "src data:" << attrib.texcoords[2 * i] << "," << attrib.texcoords[2 * i + 1] << endl;
-		cout << "dst data:" << uvs[i][0] << "," << uvs[i][1] << endl;
-	}
-	int last = pointCount - 1;
-	cout << "last src data:" << attrib.texcoords[2 * last] << "," << attrib.texcoords[2 * last + 1] << endl;
-	cout << "last dst data:" << uvs[last][0] << "," << uvs[last][1] << endl;
-	abort();
 	num_faces=faceNum;
+	int pointCount = attrib.vertices.size() / 3;
+	vertices=make_aligned_array<cv::Vec4f>(32, sizeof(cv::Vec4f)*pointCount);
+	copyV3fTo4f(attrib.vertices.data(), vertices, pointCount);
+	uvs = make_aligned_array<cv::Vec2f>(32,sizeof(cv::Vec2f)*pointCount);
+	copyV2fTo2f(attrib.texcoords.data(),uvs,pointCount);
+	normals=make_aligned_array<cv::Vec4f>(32, sizeof(cv::Vec4f)*pointCount);
+	copyV3fTo4f(attrib.normals.data(),normals,pointCount);
+	for (size_t i = 0; i < pointCount; i++)
+	{
+		if(attrib.normals[3*i]!=normals[i][0] ||attrib.normals[3*i+1]!=normals[i][1]){
+			cout<<"diff p:"<<i<<endl;
+			break;
+		}
+	}
+	if(materalCount<=0){ //这个时候加载顶点颜色
+		verticeColors=make_aligned_array<cv::Vec4f>(32, sizeof(cv::Vec4f)*pointCount);
+		copyV3fTo4f(attrib.colors.data(),verticeColors,pointCount);
+	}
+	vertCount=pointCount;
 	return ret;
 }
 
@@ -83,8 +85,7 @@ void ObjModel::copyV3fTo4f(float * src, std::unique_ptr<cv::Vec4f[], free_delete
 	int i = 0;
 	for (i = 0; i < vCount; i += 2) {
 		__m256 srcData = _mm256_loadu_ps(src);
-		__m256 xyzwD = _mm256_permutevar8x32_ps(srcData, srcIdx);
-		xyzwD = _mm256_blend_ps(xyzwD, cOne, 0x88);
+		__m256 xyzwD = _mm256_blend_ps(_mm256_permutevar8x32_ps(srcData, srcIdx),cOne,0x88);
 		_mm256_store_ps(pDst, xyzwD);
 		src += 6;
 		pDst += 8;
@@ -96,27 +97,63 @@ void ObjModel::copyV3fTo4f(float * src, std::unique_ptr<cv::Vec4f[], free_delete
 	}
 }
 
-//花费了0.018364秒
-std::unique_ptr<float[],free_delete> ObjModel::transform(std::unique_ptr<float[],free_delete>& rtMat)
-{
-	auto result=make_aligned_array<float>(16,4*sizeof(float));
-	/*
-	float* pMat=rtMat.get();
-	__m128 row0=_mm_load_ps(pMat);
-	__m128 row1=_mm_load_ps(pMat+4);
-	__m128 row2=_mm_load_ps(pMat+8);
-	__m128 pickW=_mm_set_ps(0xFFFFFFFF,0x00,0x00,0x00);
-	float* pVert=vertices.get();
-	float* pDst=result.get();
-	for(int i=0;i<verticeCount;i++){
-		__m128 xyzw=_mm_load_ps(pVert);
-		__m128 newP=_mm_add_ps(_mm_add_ps(_mm_dp_ps(row0,xyzw,0xF1),_mm_dp_ps(row1,xyzw,0xF2)),_mm_add_ps(_mm_dp_ps(row2,xyzw,0xF4),_mm_and_ps(pickW,xyzw)));
-		_mm_store_ps(pDst,newP);
-		pVert+=4;
-		pDst+=4;
+void ObjModel::copyV2fTo2f(float* src,std::unique_ptr<cv::Vec2f[], free_delete>& dst,int vCount){
+	int i=0;
+	float* pDst = reinterpret_cast<float*>(dst.get());
+	for (i = 0; i < vCount; i += 4) {
+		__m256 srcData=_mm256_loadu_ps(src);
+		_mm256_store_ps(pDst,srcData);
+		src+=8;
+		pDst+=8;
 	}
-	*/
+	while(i<vCount){
+		*pDst=*src;
+		*(pDst+1)=*(src+1);
+		i++;
+	}
+}
+
+//花费了0.018364秒
+std::unique_ptr<cv::Vec4f[],free_delete> ObjModel::tranVertices(cv::Mat& tMat)
+{
+	auto result=make_aligned_array<cv::Vec4f>(32,sizeof(cv::Vec4f)*vertCount);
+	int i=0;
+	__m128 row0=_mm_loadu_ps(tMat.ptr<float>(0));
+	__m256 row0_256=_mm256_insertf128_ps(_mm256_castps128_ps256(row0),row0,1);
+	__m128 row1=_mm_loadu_ps(tMat.ptr<float>(1));
+	__m256 row1_256=_mm256_insertf128_ps(_mm256_castps128_ps256(row1),row1,1);
+	__m128 row2=_mm_loadu_ps(tMat.ptr<float>(2));
+	__m256 row2_256=_mm256_insertf128_ps(_mm256_castps128_ps256(row2),row2,1);
+	__m128 row3=_mm_loadu_ps(tMat.ptr<float>(3));
+	__m256 row3_256=_mm256_insertf128_ps(_mm256_castps128_ps256(row3),row3,1);
+	float* pSrc=reinterpret_cast<float*>(vertices.get());
+	float* pDst=reinterpret_cast<float*>(result.get());
+	for	(i=0;i<vertCount;i+=2){
+		__m256 srcData=_mm256_load_ps(pSrc);
+		__m256 x=_mm256_dp_ps(row0_256,srcData,0xF1);
+		__m256 y=_mm256_dp_ps(row1_256,srcData,0xF2);
+		__m256 z=_mm256_dp_ps(row2_256,srcData,0xF4);
+		__m256 w=_mm256_dp_ps(row3_256,srcData,0xF8);
+		__m256 xyzw=_mm256_add_ps(_mm256_add_ps(_mm256_add_ps(x,y),z),w);
+		_mm256_store_ps(pDst,xyzw);
+		pSrc+=8;
+		pDst+=8;
+	}
+	if(i!=vertCount){
+		__m128 srcData=_mm_load_ps(pSrc);
+		__m128 x=_mm_dp_ps(row0,srcData,0xF1);
+		__m128 y=_mm_dp_ps(row1,srcData,0xF2);
+		__m128 z=_mm_dp_ps(row2,srcData,0xF4);
+		__m128 w=_mm_dp_ps(row3,srcData,0xF8);
+		__m128 xyzw=_mm_add_ps(_mm_add_ps(_mm_add_ps(x,y),z),w);
+		_mm_store_ps(pDst,xyzw);
+		i++;
+	}
 	return std::move(result);
+}
+
+std::vector<tinyobj::shape_t>& ObjModel::getShapes(){
+	return shapes;
 }
 
 cv::Vec4b ObjModel::getMixColor(std::vector<int>& ids, cv::Vec3f& bc_screen)
@@ -136,32 +173,19 @@ cv::Vec4b ObjModel::getMixColor(std::vector<int>& ids, cv::Vec3f& bc_screen)
 
 cv::Vec4b ObjModel::getTextureColor(int materialId,std::vector<int>& tids, cv::Vec3f& bc_screen)
 {
-	/*
 	cv::Vec4b bgra(0, 0, 0, 255);
-	cv::Mat& tex = textures[materialId];
+	cv::Mat& tex = diffuseTextures[materialId];
 	int width = tex.cols;
 	int height = tex.rows;
 	float u = 0.f, v = 0.f;
-	u = attrib.texcoords[2 * tids[0]] * bc_screen[0] +
-		attrib.texcoords[2 * tids[1]] * bc_screen[1] +
-		attrib.texcoords[2 * tids[2]] * bc_screen[2];
-	v= attrib.texcoords[2 * tids[0]+1] * bc_screen[0] +
-		attrib.texcoords[2 * tids[1]+1] * bc_screen[1] +
-		attrib.texcoords[2 * tids[2]+1] * bc_screen[2];
+	u = uvs[tids[0]][0] * bc_screen[0] +
+		uvs[tids[1]][0] * bc_screen[1] +
+		uvs[tids[2]][0] * bc_screen[2];
+	v= uvs[tids[0]][1] * bc_screen[0] +
+		uvs[tids[1]][1] * bc_screen[1] +
+		uvs[tids[2]][1] * bc_screen[2];
 	int x= std::min(int(u * width + 0.5), width - 1);
 	int y = std::min(int((1.0-v) * height + 0.5), height - 1);
-	if (tex.channels() == 4) {
-		bgra = tex.at<cv::Vec4b>(y, x);
-		return bgra;
-	}
-	else
-	{
-		cv::Vec3b& color = tex.at<cv::Vec3b>(y, x);
-		bgra[0] = color[0];
-		bgra[1] = color[1];
-		bgra[2] = color[2];
-		return bgra;
-	}
-	*/
-	return cv::Vec4b(0, 0, 0, 255);
+	bgra = tex.at<cv::Vec4b>(y, x);
+	return bgra;
 }

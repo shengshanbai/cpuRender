@@ -1,6 +1,7 @@
 #include "render.h"
 #include "log.h"
 #include <algorithm>
+#include <cmath>
 
 void draw_point(cv::Mat& image, int row, int col, unsigned char color) {
     if (row < 0 || col < 0 || row >= image.rows || col >= image.cols) {
@@ -87,10 +88,11 @@ void draw_point(cv::Mat& image, cv::Vec2i& point, cv::Vec4b& color) {
  *   --> t = (AB.x * AP.y - AB.y * AP.x) / (AB.x * AC.y - AB.y * AC.x)
  * check if the point is in triangle: (s >= 0) && (t >= 0) && (s + t <= 1)
  */
-cv::Vec3f barycentric(cv::Vec2i& A,cv::Vec2i& B,cv::Vec2i& C,cv::Vec2i& P){
-    cv::Vec2i AB = B-A;
-    cv::Vec2i AC = C-A;
-    cv::Vec2i AP = P-A;
+cv::Vec3f barycentric(cv::Vec4f& A,cv::Vec4f& B,cv::Vec4f& C,cv::Vec4f& P){
+    /*
+    cv::Vec4f AB = B-A;
+    cv::Vec4f AC = C-A;
+    cv::Vec4f AP = P-A;
 	float s, t;
 
     int denom = AB[0]* AC[1] - AB[1] * AC[0];
@@ -100,72 +102,23 @@ cv::Vec3f barycentric(cv::Vec2i& A,cv::Vec2i& B,cv::Vec2i& C,cv::Vec2i& P){
     s = static_cast<float>((AC[1]* AP[0] - AC[0] * AP[1]) / (double)denom);
     t = static_cast<float>((AB[0] * AP[1] - AB[1] * AP[0]) / (double)denom);
     return cv::Vec3f{1.0f-(s+t),s,t};
-}
-
-cv::Vec3f barycentric(cv::Vec3f& A,cv::Vec3f& B,cv::Vec3f& C,cv::Vec3f& P){
-    cv::Vec3f AB = B-A;
-    cv::Vec3f AC = C-A;
-    cv::Vec3f AP = P-A;
-	float s, t;
-
-    int denom = AB[0]* AC[1] - AB[1] * AC[0];
-    if(denom == 0) {
-        return cv::Vec3f(-1,1,1);
-    }
-    s = static_cast<float>((AC[1]* AP[0] - AC[0] * AP[1]) / (double)denom);
-    t = static_cast<float>((AB[0] * AP[1] - AB[1] * AP[0]) / (double)denom);
-    return cv::Vec3f{1.0f-(s+t),s,t};
-}
-
-static int in_triangle(cv::Vec2i& A,cv::Vec2i& B,cv::Vec2i& C,cv::Vec2i& P){
-    cv::Vec3f center=barycentric(A,B,C,P);
-    return (center[0] >=0 && center[1] >= 0 && center[2]>=0);
-}
-
-void drawModel(RenderContext & context, ObjModel & model, cv::Mat & diffuse_map, cv::Mat & normal_map, cv::Mat & specular_map)
-{
-
-}
-
-void fill_triangle(cv::Mat& image,cv::Vec3f& point0,cv::Vec3f& point1,cv::Vec3f& point2,
-    cv::Vec2f& uv0,cv::Vec2f& uv1,cv::Vec2f& uv2,cv::Mat& zbuffer,cv::Mat& texture,float intensity){
-    int width=image.cols;
-    int height=image.rows;
-
-    int tex_width=texture.cols;
-    int tex_height=texture.rows;
-
-    int minX=static_cast<int>(std::max(std::min(std::min(point0[0],point1[0]),point2[0]),0.0f));
-    int minY=static_cast<int>(std::max(std::min(std::min(point0[1],point1[1]),point2[1]),0.0f));
-    int maxX=static_cast<int>(std::min(std::max(std::max(point0[0],point1[0]),point2[0]),(float)width-1));
-    int maxY=static_cast<int>(std::min(std::max(std::max(point0[1],point1[1]),point2[1]),(float)height-1));
-    for (int i = minX; i <=maxX; i++)
-    {
-        for (int j = minY; j <= maxY; j++)
-        {
-            cv::Vec3f P(i,j,1);
-            cv::Vec3f baryC=barycentric(point0,point1,point2,P);
-            if(baryC[0] >=0 && baryC[1] >= 0 && baryC[2]>=0){ //在三角形内部
-                float z=baryC[0]*point0[2]+baryC[1]*point1[2]+baryC[2]*point2[2];
-                if (zbuffer.at<float>(j,i)<z){
-                    float tex_x=baryC[0]*uv0[0]+baryC[1]*uv1[0]+baryC[2]*uv2[0];
-                    float tex_y=baryC[0]*uv0[1]+baryC[1]*uv1[1]+baryC[2]*uv2[1];
-                    int t_x = std::min(std::max(0,(int)(tex_x * (tex_width - 1))),tex_width-1);
-                    int t_y = std::min(std::max(0,(int)(tex_y * (tex_height - 1))),tex_height-1);
-                    cv::Vec4b color=texture.at<cv::Vec4b>(t_y,t_x);
-                    color[0]=cv::saturate_cast<uchar>(color[0]*intensity);
-                    color[1]=cv::saturate_cast<uchar>(color[1]*intensity);
-                    color[2]=cv::saturate_cast<uchar>(color[2]*intensity);
-                    image.at<cv::Vec4b>(j,i)=color;
-                    zbuffer.at<float>(j,i)=z;
-                }
-            }
-        }
-    }
+    */
+   cv::Vec3f s[2];
+	for (int i = 2; i--; ) {
+		s[i][0] = C[i] - A[i];
+		s[i][1] = B[i] - A[i];
+		s[i][2] = A[i] - P[i];
+	}
+	cv::Vec3f u = s[0].cross(s[1]);
+	if (std::abs(u[2]) > 1e-6) // dont forget that u[2] is integer. If it is zero then triangle ABC is degenerate
+		return cv::Vec3f(1.f - (u[0] + u[1]) / u[2], u[1] / u[2], u[0] / u[2]);
+	return cv::Vec3f(-1, 1, 1);
 }
 
 RenderContext::RenderContext(int width, int height)
 {
+    this->width=width;
+    this->height=height;
 	framebuffer.create(height, width, CV_8UC4);
 	depthbuffer.create(height,width,CV_32FC1);
 	clearDepthBuffer();
@@ -177,10 +130,125 @@ RenderContext::~RenderContext()
 
 void RenderContext::clearDepthBuffer()
 {
-	depthbuffer.setTo(cv::Scalar(0.0));
+	depthbuffer.setTo(cv::Scalar(-std::numeric_limits<float>::max()));
 }
 
-void RenderContext::drawModel(ObjModel & model, cv::Mat4f & transform)
+void RenderContext::drawModel(ObjModel & model, cv::Mat & transform)
 {
+    auto vertices=model.tranVertices(transform);
+    std::vector<cv::Vec4f> pts(3);
+	std::vector<int> vids(3);
+	std::vector<int> tids(3);
+	cv::Vec2f clamp(width - 1, height - 1);
+    for(auto& shape:model.getShapes()){
+        for (int faceId = 0; faceId < shape.mesh.num_face_vertices.size(); faceId++) {
+            int faceIdx3 = 3 * faceId;
+            int meterail_id = shape.mesh.material_ids[faceId];
+            for (int i = 0; i < 3; i++) {
+				int idx = shape.mesh.indices[faceIdx3 + i].vertex_index;
+				vids[i] = idx;
+				tids[i] = shape.mesh.indices[faceIdx3 + i].texcoord_index;
+				pts[i] = vertices[idx];
+			}
+            cv::Vec2f bboxmin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+			cv::Vec2f bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
+            for (int k = 0; k < 3; k++) {
+				for (int m = 0; m < 2; m++) {
+					bboxmin[m] = std::max(0.f, std::min(bboxmin[m], round(pts[k][m])));
+					bboxmax[m] = std::min(clamp[m], std::max(bboxmax[m], round(pts[k][m])));
+				}
+			}
+            cv::Vec4f P;
+            for (P[0] = bboxmin[0]; P[0] <= bboxmax[0]; P[0]++) {
+				for (P[1] = bboxmin[1]; P[1] <= bboxmax[1]; P[1]++) {
+                    cv::Vec3f bc_screen;
+					P[2] = 0;
+                    bc_screen = barycentric(pts[0], pts[1], pts[2], P);
+                    if (bc_screen[0] < 0 || bc_screen[1] < 0 || bc_screen[2] < 0)
+						continue;
+                    for (int i = 0; i < 3; i++) P[2] += pts[i][2] * bc_screen[i];
+                    if (depthbuffer.at<float>(P[1],P[0]) < P[2]) {
+                        cv::Vec4b& bgra = framebuffer.at<cv::Vec4b>(P[1], P[0]);
+                        if (meterail_id >= 0) {
+                            cv::Vec4b color= model.getTextureColor(meterail_id, tids, bc_screen);
+							if (color[3] == 255) {
+								bgra = color;
+								depthbuffer.at<float>(P[1], P[0]) = P[2];
+							}
+                            else if(color[3]>0 && color[3]<255)
+							{
+                                long id = P[1] * width + P[0];
+								auto search = blendmap.find(id);
+                                if (search != blendmap.end()) {
+									std::vector<DepthColor>& colors = search->second;
+									auto it = colors.begin();
+									DepthColor dc;
+									dc.color = color;
+									dc.depth = P[2];
+									bool inserted = false;
+									bool skip = false;
+                                    while (it!=colors.end())
+									{
+										if (abs(it->depth - P[2]) < 1e-4) {
+											skip = true;
+											break;
+										}
+										if (it->depth < P[2]) {
+											colors.insert(it, dc);
+											inserted = true;
+											break;
+										}
+										it++;
+									}
+									if (!skip&&!inserted) {
+										colors.emplace_back(dc);
+									}
+                                }
+                                else{
+                                    std::vector<DepthColor> colors(1);
+									colors[0].color = color;
+									colors[0].depth = P[2];
+									blendmap.emplace(std::make_pair(id,colors));
+                                }
+                            }
+                            else {
+							    bgra = model.getMixColor(vids, bc_screen);
+							    depthbuffer.at<float>(P[1], P[0]) = P[2];
+						    }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    blendAlpha();
+}
 
+void RenderContext::blendAlpha(){
+    auto iter = blendmap.begin();
+	int width = framebuffer.cols;
+	while (iter !=blendmap.end())
+	{
+		auto& p = iter->first;
+		int col = p % width;
+		int row = p / width;
+		cv::Vec4b& bgra = framebuffer.at<cv::Vec4b>(row, col);
+		float& depth = depthbuffer.at<float>(row, col);
+		auto& colors = iter->second;
+		auto c_iter = colors.begin();
+		while (c_iter!=colors.end())
+		{
+			if (c_iter->depth >= depth) {
+				float alpha = c_iter->color[3] / 255.0;
+				bgra = bgra * (1 - alpha) + alpha * c_iter->color;
+			}
+			c_iter++;
+		}
+		bgra[3] = 255;
+		iter++;
+	}
+}
+
+void RenderContext::writeTo(std::string filename){
+    cv::imwrite(filename,framebuffer);
 }

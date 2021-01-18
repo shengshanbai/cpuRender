@@ -90,7 +90,7 @@ struct free_delete
     void operator()(void* x) { aligned_free(x); }
 };
 
-template<class T> std::unique_ptr<T[],free_delete> make_aligned_array(int alignment, int length){
+template<class T> std::unique_ptr<T[],free_delete> make_aligned_array(int alignment, size_t length){
 	//保证分配的长度是alignment整数
 	while (length%alignment!=0)
 	{
