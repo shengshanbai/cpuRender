@@ -72,9 +72,8 @@ cv::Vec4f& ObjModel::getVertex(int faceId,int subId){
 	return vertices[index];
 }
 
-cv::Vec2f& ObjModel::getUV(int faceId,int subId){
-	size_t index=faceId*3+subId;
-	return uvs[index];
+cv::Vec2f& ObjModel::getUV(int tid){
+	return uvs[tid];
 }
 
 void ObjModel::copyV3fTo4f(float * src, std::unique_ptr<cv::Vec4f[], free_delete> & dst, int vCount)
@@ -116,7 +115,11 @@ void ObjModel::copyV2fTo2f(float* src,std::unique_ptr<cv::Vec2f[], free_delete>&
 //花费了0.018364秒
 std::unique_ptr<cv::Vec4f[],free_delete> ObjModel::tranVertices(cv::Mat& tMat)
 {
-	auto result=make_aligned_array<cv::Vec4f>(32,sizeof(cv::Vec4f)*vertCount);
+	return std::move(mat4MultiVec4f(vertices,tMat,vertCount));
+}
+
+std::unique_ptr<cv::Vec4f[],free_delete> ObjModel::mat4MultiVec4f(std::unique_ptr<cv::Vec4f[], free_delete>& src,cv::Mat& tMat,int count){
+	auto result=make_aligned_array<cv::Vec4f>(32,sizeof(cv::Vec4f)*count);
 	int i=0;
 	__m128 row0=_mm_loadu_ps(tMat.ptr<float>(0));
 	__m256 row0_256=_mm256_insertf128_ps(_mm256_castps128_ps256(row0),row0,1);
@@ -126,9 +129,9 @@ std::unique_ptr<cv::Vec4f[],free_delete> ObjModel::tranVertices(cv::Mat& tMat)
 	__m256 row2_256=_mm256_insertf128_ps(_mm256_castps128_ps256(row2),row2,1);
 	__m128 row3=_mm_loadu_ps(tMat.ptr<float>(3));
 	__m256 row3_256=_mm256_insertf128_ps(_mm256_castps128_ps256(row3),row3,1);
-	float* pSrc=reinterpret_cast<float*>(vertices.get());
+	float* pSrc=reinterpret_cast<float*>(src.get());
 	float* pDst=reinterpret_cast<float*>(result.get());
-	for	(i=0;i<vertCount;i+=2){
+	for	(i=0;i<count;i+=2){
 		__m256 srcData=_mm256_load_ps(pSrc);
 		__m256 x=_mm256_dp_ps(row0_256,srcData,0xF1);
 		__m256 y=_mm256_dp_ps(row1_256,srcData,0xF2);
@@ -139,7 +142,7 @@ std::unique_ptr<cv::Vec4f[],free_delete> ObjModel::tranVertices(cv::Mat& tMat)
 		pSrc+=8;
 		pDst+=8;
 	}
-	if(i!=vertCount){
+	if(i!=count){
 		__m128 srcData=_mm_load_ps(pSrc);
 		__m128 x=_mm_dp_ps(row0,srcData,0xF1);
 		__m128 y=_mm_dp_ps(row1,srcData,0xF2);
@@ -150,6 +153,13 @@ std::unique_ptr<cv::Vec4f[],free_delete> ObjModel::tranVertices(cv::Mat& tMat)
 		i++;
 	}
 	return std::move(result);
+}
+
+std::unique_ptr<cv::Vec4f[],free_delete> ObjModel::tranNormals(cv::Mat& tMat){
+	cv::Mat tNorm;
+	cv::invert(tMat,tNorm);
+	cv::transpose(tNorm,tNorm);
+	return std::move(mat4MultiVec4f(normals,tNorm,vertCount));
 }
 
 std::vector<tinyobj::shape_t>& ObjModel::getShapes(){
@@ -171,7 +181,7 @@ cv::Vec4b ObjModel::getMixColor(std::vector<int>& ids, cv::Vec3f& bc_screen)
 	return bgra;
 }
 
-cv::Vec4b ObjModel::getTextureColor(int materialId,std::vector<int>& tids, cv::Vec3f& bc_screen)
+cv::Vec4b ObjModel::getTextureColor(int materialId,int (&tids)[3], cv::Vec3f& bc_screen)
 {
 	cv::Vec4b bgra(0, 0, 0, 255);
 	cv::Mat& tex = diffuseTextures[materialId];
@@ -188,4 +198,8 @@ cv::Vec4b ObjModel::getTextureColor(int materialId,std::vector<int>& tids, cv::V
 	int y = std::min(int((1.0-v) * height + 0.5), height - 1);
 	bgra = tex.at<cv::Vec4b>(y, x);
 	return bgra;
+}
+
+cv::Mat& ObjModel::getMaterial(int id){
+	return diffuseTextures[id];
 }
