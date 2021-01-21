@@ -7,9 +7,13 @@ using namespace std;
 
 static inline cv::Vec3f barycentric(cv::Vec2f &AB, cv::Vec2f &pAC, cv::Vec4f &A, cv::Vec3f &P, float &w)
 {
-    cv::Vec2f PA(A[0] - P[0], A[1] - P[1]);
-    float u = -pAC.dot(PA);
-    float v = PA[0] * AB[1] - PA[1] * AB[0];
+    __m128 pa = _mm_setr_ps(A[0] - P[0], A[1] - P[1], A[0] - P[0], A[1] - P[1]);
+    __m128 acb = _mm_setr_ps(-pAC[0], -pAC[1], AB[1], -AB[0]);
+    __m128 result = _mm_hadd_ps(_mm_mul_ps(pa, acb), _mm_set1_ps(0));
+    float u;
+    float v;
+    _MM_EXTRACT_FLOAT(u, result, 0);
+    _MM_EXTRACT_FLOAT(v, result, 1);
     return cv::Vec3f(1 - (u + v) * w, u * w, v * w);
 }
 

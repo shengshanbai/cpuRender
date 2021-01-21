@@ -62,14 +62,6 @@ bool ObjModel::loadObj(std::string model, std::string mtl_dir)
 	}
 	normals = make_aligned_array<cv::Vec4f>(32, sizeof(cv::Vec4f) * pointCount);
 	copyV3fTo4f(attrib.normals.data(), normals, pointCount);
-	for (size_t i = 0; i < pointCount; i++)
-	{
-		if (attrib.normals[3 * i] != normals[i][0] || attrib.normals[3 * i + 1] != normals[i][1])
-		{
-			cout << "diff p:" << i << endl;
-			break;
-		}
-	}
 	vertCount = pointCount;
 	return ret;
 }
