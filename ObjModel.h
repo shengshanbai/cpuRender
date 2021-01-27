@@ -12,7 +12,6 @@ public:
 	ObjModel();
 	bool loadObj(std::string model, std::string mtl_dir);
 	std::unique_ptr<cv::Vec4f[], free_delete> tranVertices(cv::Mat &tMat);
-	std::unique_ptr<cv::Vec4f[], free_delete> tranNormals(cv::Mat &tMat);
 	cv::Vec4f &getVertColor(int vid);
 	cv::Mat &getMaterial(int id);
 	int getNumFaces();
@@ -28,7 +27,6 @@ private:
 
 	std::unique_ptr<cv::Vec4f[], free_delete> vertices;
 	std::unique_ptr<cv::Vec2f[], free_delete> uvs;
-	std::unique_ptr<cv::Vec4f[], free_delete> normals;
 	std::unique_ptr<cv::Vec4f[], free_delete> verticeColors;
 	std::vector<tinyobj::shape_t> shapes;
 	int num_faces;

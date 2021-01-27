@@ -43,7 +43,7 @@ void mainLoop()
 	int windowWidth = 864;
 	int windowHight = 864;
 	ObjModel model;
-	model.loadObj("../data/toukui/toukui.obj", "../data/toukui");
+	model.loadObj("../data/santa_hat/maozi_3.obj", "../data/santa_hat");
 	ObjModel headModel;
 	headModel.loadObj("../data/smooth_head.obj", "../data");
 	RenderContext rContex(windowWidth, windowHight);
@@ -71,8 +71,9 @@ void mainLoop()
 	auto start = chrono::system_clock::now();
 	for (int i = 0; i < 10; i++)
 	{
-		rContex.drawOccluder(headModel, transMat);
-		rContex.drawModel(model, modelT);
+		rContex.drawModel(headModel, transMat);
+		rContex.drawModel(model, transMat);
+		rContex.blendAlpha();
 		rContex.clearDepthBuffer();
 	}
 	auto end = chrono::system_clock::now();

@@ -28,14 +28,24 @@ bool ObjModel::loadObj(std::string model, std::string mtl_dir)
 
 	for (tinyobj::material_t &material : materials)
 	{
-		cv::Mat tex = cv::imread(mtl_dir + "/" + material.diffuse_texname, cv::IMREAD_UNCHANGED);
+		if (material.diffuse_texname.empty())
+		{
+			diffuseTextures.emplace_back(cv::Mat());
+			continue;
+		}
+		cv::Mat tex = cv::imread(mtl_dir + "/" + material.diffuse_texname,
+								 cv::IMREAD_UNCHANGED);
 		if (tex.empty())
 		{
-			FATAL(("can not load material:" + material.diffuse_texname).c_str());
+			return false;
 		}
 		if (tex.channels() == 3)
 		{
 			cv::cvtColor(tex, tex, cv::COLOR_BGR2BGRA);
+		}
+		if (tex.depth() == CV_16U)
+		{
+			tex.convertTo(tex, CV_8U, 1 / 256.0);
 		}
 		diffuseTextures.emplace_back(tex);
 	}
@@ -60,8 +70,6 @@ bool ObjModel::loadObj(std::string model, std::string mtl_dir)
 		verticeColors = make_aligned_array<cv::Vec4f>(32, sizeof(cv::Vec4f) * pointCount);
 		copyV3fTo4f(attrib.colors.data(), verticeColors, pointCount);
 	}
-	normals = make_aligned_array<cv::Vec4f>(32, sizeof(cv::Vec4f) * pointCount);
-	copyV3fTo4f(attrib.normals.data(), normals, pointCount);
 	vertCount = pointCount;
 	return ret;
 }
@@ -88,7 +96,7 @@ void ObjModel::copyV3fTo4f(float *src, std::unique_ptr<cv::Vec4f[], free_delete>
 	static __m256 cOne = _mm256_set1_ps(1.0f);
 	float *pDst = reinterpret_cast<float *>(dst.get());
 	int i = 0;
-	for (i = 0; i < vCount; i += 2)
+	for (i = 0; i <= vCount - 2; i += 2)
 	{
 		__m256 srcData = _mm256_loadu_ps(src);
 		__m256 xyzwD = _mm256_blend_ps(_mm256_permutevar8x32_ps(srcData, srcIdx), cOne, 0x88);
@@ -108,7 +116,7 @@ void ObjModel::copyV2fTo2f(float *src, std::unique_ptr<cv::Vec2f[], free_delete>
 {
 	int i = 0;
 	float *pDst = reinterpret_cast<float *>(dst.get());
-	for (i = 0; i < vCount; i += 4)
+	for (i = 0; i <= vCount - 4; i += 4)
 	{
 		__m256 srcData = _mm256_loadu_ps(src);
 		_mm256_store_ps(pDst, srcData);
@@ -119,6 +127,8 @@ void ObjModel::copyV2fTo2f(float *src, std::unique_ptr<cv::Vec2f[], free_delete>
 	{
 		*pDst = *src;
 		*(pDst + 1) = *(src + 1);
+		pDst += 2;
+		src + 2;
 		i++;
 	}
 }
@@ -143,7 +153,7 @@ std::unique_ptr<cv::Vec4f[], free_delete> ObjModel::mat4MultiVec4f(std::unique_p
 	__m256 row3_256 = _mm256_insertf128_ps(_mm256_castps128_ps256(row3), row3, 1);
 	float *pSrc = reinterpret_cast<float *>(src.get());
 	float *pDst = reinterpret_cast<float *>(result.get());
-	for (i = 0; i < count; i += 2)
+	for (i = 0; i <= count - 2; i += 2)
 	{
 		__m256 srcData = _mm256_load_ps(pSrc);
 		__m256 x = _mm256_dp_ps(row0_256, srcData, 0xF1);
@@ -167,14 +177,6 @@ std::unique_ptr<cv::Vec4f[], free_delete> ObjModel::mat4MultiVec4f(std::unique_p
 		i++;
 	}
 	return std::move(result);
-}
-
-std::unique_ptr<cv::Vec4f[], free_delete> ObjModel::tranNormals(cv::Mat &tMat)
-{
-	cv::Mat tNorm;
-	cv::invert(tMat, tNorm);
-	cv::transpose(tNorm, tNorm);
-	return std::move(mat4MultiVec4f(normals, tNorm, vertCount));
 }
 
 std::vector<tinyobj::shape_t> &ObjModel::getShapes()
